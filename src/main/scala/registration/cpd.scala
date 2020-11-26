@@ -8,7 +8,7 @@ import breeze.numerics.abs
 import scalismo.common._
 import scalismo.geometry.{Point, Point3D, _3D}
 import scalismo.io.MeshIO
-import scalismo.mesh.{TriangleList, TriangleMesh3D}
+import scalismo.mesh.TriangleMesh3D
 import scalismo.ui.api.ScalismoUI
 
 /*
@@ -88,10 +88,9 @@ case class cpd(targetPoints: DiscreteDomain[_3D], sourcePoints: DiscreteDomain[_
     s / (D * N * M)
   }
 
-  def registration(max_iteration: Int = 10, tolerance: Double = 0.001, triangulation: Option[TriangleList] = None): myMesh = {
+  def registration(max_iteration: Int = 10, tolerance: Double = 0.001): myMesh = {
 
     (0 until max_iteration).foldLeft(source) { (Y, i) =>
-      MeshIO.writeMesh(TriangleMesh3D(Y.points, triangulation.get), new File(s"/Users/dennis/tmp/dump/${i}.stl"))
       val currentSigma2 = sigma2
       println(s"CPD, iteration: ${i}, variance: ${sigma2}")
       val TY = iteration(target, Y)
@@ -217,7 +216,7 @@ object cpd {
     // lambda = trade-off between goodness of fit and regularization
     val cp = cpd(target, source, lamdba = 10, beta = 100, w = 0.0) // target, source ... Source is moving!!!
 
-    val finalReg = cp.registration(max_iteration = 1000, tolerance = 0.001, Option(source.triangulation))
+    val finalReg = cp.registration(max_iteration = 1000, tolerance = 0.001)
     val finalMesh = fixTriangulation(source, finalReg.points)
     val ui = ScalismoUI()
     val showTarget = ui.show(target, "target")
