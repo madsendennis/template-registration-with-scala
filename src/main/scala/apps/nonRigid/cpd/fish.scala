@@ -1,9 +1,9 @@
-package apps.nonRigid.cpd
+package apps.NonRigid.cpd
 
 import java.awt.Color
 import java.io.File
 
-import registration.CPDNonRigid
+import api.registration.CPDNonRigid
 import scalismo.common._
 import scalismo.io.MeshIO
 import scalismo.ui.api.ScalismoUI
@@ -12,6 +12,7 @@ object fish extends App {
 
   scalismo.initialize()
 
+  // Convert "trianglemeshes" to point cloud domain - otherwise nothing shows up in the UI as no triangles are defined.
   val target = MeshIO.readMesh(new File("data/fish0.ply")).get
   val targetPoints = UnstructuredPointsDomain.Create.CreateUnstructuredPointsDomain3D.create(target.pointSet.points.toIndexedSeq)
   val source = MeshIO.readMesh(new File("data/fish1.ply")).get

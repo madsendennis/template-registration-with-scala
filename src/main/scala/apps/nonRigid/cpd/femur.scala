@@ -1,9 +1,9 @@
-package apps.nonRigid.cpd
+package apps.NonRigid.cpd
 
 import java.awt.Color
 import java.io.File
 
-import registration.CPDNonRigid
+import api.registration.CPDNonRigid
 import scalismo.io.MeshIO
 import scalismo.ui.api.ScalismoUI
 
