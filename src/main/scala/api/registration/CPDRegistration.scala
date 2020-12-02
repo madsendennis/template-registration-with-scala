@@ -1,14 +1,17 @@
 package api.registration
 
-import api.registration.cpd.CPDBase
+import api.registration.cpd.CPDFactory
+import api.registration.utils.PointSequenceConverter
 import scalismo.common.{DiscreteDomain, DiscreteField, DomainWarp, Vectorizer}
 import scalismo.geometry.{NDSpace, Point}
+
+import language.higherKinds
 
 class RigidCPDRegistration[D: NDSpace, DDomain[A] <: DiscreteDomain[A]](template: DDomain[D], lambda: Double = 2, beta: Double = 2, w: Double = 2)(
     implicit warper: DomainWarp[D, DDomain],
     vectorizer: Vectorizer[Point[D]],
     pointSequenceConverter: PointSequenceConverter[D]) {
-  val cpd = new CPDBase(template.pointSet.points.toSeq, lambda, beta, w)
+  val cpd = new CPDFactory(template.pointSet.points.toSeq, lambda, beta, w)
 
   def registrationMethod(targetPoints: Seq[Point[D]]) = cpd.registerRigidly(targetPoints)
 
@@ -20,7 +23,7 @@ class RigidCPDRegistration[D: NDSpace, DDomain[A] <: DiscreteDomain[A]](template
   }
 }
 
-class NonRigidCPDRegistration[D: NDSpace, DDomain[D] <: DiscreteDomain[D]](template: DDomain[D], lambda: Double, beta: Double, w: Double)(
+class NonRigidCPDRegistration[D: NDSpace, DDomain[A] <: DiscreteDomain[A]](template: DDomain[D], lambda: Double = 2, beta: Double = 2, w: Double = 2)(
     implicit warper: DomainWarp[D, DDomain],
     vectorizer: Vectorizer[Point[D]],
     pointSequenceConverter: PointSequenceConverter[D])
@@ -29,7 +32,7 @@ class NonRigidCPDRegistration[D: NDSpace, DDomain[D] <: DiscreteDomain[D]](templ
   override def registrationMethod(targetPoints: Seq[Point[D]]) = cpd.registerNonRigidly(targetPoints)
 }
 
-class AffineCPDRegistration[D: NDSpace, DDomain[D] <: DiscreteDomain[D]](template: DDomain[D], lambda: Double, beta: Double, w: Double)(
+class AffineCPDRegistration[D: NDSpace, DDomain[A] <: DiscreteDomain[A]](template: DDomain[D], lambda: Double = 2, beta: Double = 2, w: Double = 2)(
     implicit warper: DomainWarp[D, DDomain],
     vectorizer: Vectorizer[Point[D]],
     pointSequenceConverter: PointSequenceConverter[D])

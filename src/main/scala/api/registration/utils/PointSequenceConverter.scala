@@ -1,9 +1,9 @@
-package api.registration
+package api.registration.utils
 
 import breeze.linalg.DenseMatrix
 import scalismo.common.Vectorizer
-import scalismo.geometry.{Point, Point1D, Point2D, Point3D, _1D, _2D, _3D}
 import scalismo.geometry.Point.{Point1DVectorizer, Point2DVectorizer, Point3DVectorizer}
+import scalismo.geometry._
 
 trait PointSequenceConverter[D] {
   def toPointSequence(

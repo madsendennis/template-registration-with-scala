@@ -1,4 +1,4 @@
-package api.registration
+package api.registration.utils
 
 import breeze.linalg.DenseMatrix
 import scalismo.common._

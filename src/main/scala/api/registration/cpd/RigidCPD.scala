@@ -1,6 +1,6 @@
 package api.registration.cpd
 
-import api.registration.PointSequenceConverter
+import api.registration.utils.PointSequenceConverter
 import breeze.linalg.{*, Axis, DenseMatrix, DenseVector, det, diag, norm, sum, svd, tile, trace}
 import breeze.numerics.{abs, pow}
 import scalismo.common.Vectorizer
@@ -8,7 +8,7 @@ import scalismo.geometry.{NDSpace, Point}
 
 private[cpd] class RigidCPD[D: NDSpace](
     val targetPoints: Seq[Point[D]],
-    val cpd: CPDBase[D]
+    val cpd: CPDFactory[D]
 )(
     implicit val vectorizer: Vectorizer[Point[D]],
     dataConverter: PointSequenceConverter[D]

@@ -1,6 +1,6 @@
 package api.registration.cpd
 
-import api.registration.PointSequenceConverter
+import api.registration.utils.PointSequenceConverter
 import breeze.linalg.DenseMatrix
 import scalismo.common.Vectorizer
 import scalismo.geometry.{NDSpace, Point}
@@ -10,7 +10,7 @@ import scalismo.geometry.{NDSpace, Point}
  In this script, only the non-rigid algorithm is implemented. Paper: https://arxiv.org/pdf/0905.2635.pdf
  A python implementation already exists from where parts of the implementation is from: https://github.com/siavashk/pycpd
  */
-class CPDBase[D: NDSpace](
+class CPDFactory[D: NDSpace](
     val templatePoints: Seq[Point[D]],
     val lamdba: Double = 2,
     val beta: Double = 2,

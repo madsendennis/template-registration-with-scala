@@ -1,13 +1,13 @@
 package api.registration.cpd
 
-import api.registration.PointSequenceConverter
+import api.registration.utils.PointSequenceConverter
 import breeze.linalg.{Axis, DenseMatrix, DenseVector, InjectNumericOps, diag, inv, sum, trace}
 import scalismo.common._
 import scalismo.geometry.{NDSpace, Point}
 
 private[cpd] class AffineCPD[D: NDSpace](
     override val targetPoints: Seq[Point[D]],
-    override val cpd: CPDBase[D]
+    override val cpd: CPDFactory[D]
 )(
     implicit vectorizer: Vectorizer[Point[D]],
     dataConverter: PointSequenceConverter[D]
