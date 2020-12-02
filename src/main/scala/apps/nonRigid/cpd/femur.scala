@@ -3,7 +3,7 @@ package apps.NonRigid.cpd
 import java.awt.Color
 import java.io.File
 
-import api.registration.CPDNonRigid
+import api.registration.{NonRigidCPDRegistration}
 import scalismo.io.MeshIO
 import scalismo.ui.api.ScalismoUI
 
@@ -22,15 +22,13 @@ object femur extends App {
   //    val target = MeshIO.readMesh(new File("data/femur_target_rigid.stl")).get
   //    val target = MeshIO.readMesh(new File("data/femur_target_rigid_rotate.stl")).get
 
-
   println(s"CPD Femur fun - Source points: ${source.pointSet.numberOfPoints}, target points: ${target.pointSet.numberOfPoints}")
 
   // lambda and beta both reflect the amount of smoothness regularization
   // beta = width of gaussian filter
   // lambda = trade-off between goodness of fit and regularization
-  val cpd = new CPDNonRigid(target, source, lamdba = 10, beta = 100, w = 0.0) // target, source ... Source is moving!!!
-
-  val finalMesh = cpd.Registration(max_iteration = 1000, tolerance = 0.001)
+  val cpd = new NonRigidCPDRegistration(source, lambda = 10, beta = 100, w = 0.0) // target, source ... Source is moving!!!
+  val finalMesh = cpd.register(target)
   val ui = ScalismoUI()
   val showTarget = ui.show(target, "target")
   val showSource = ui.show(source, "source")
