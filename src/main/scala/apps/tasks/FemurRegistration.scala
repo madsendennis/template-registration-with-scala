@@ -12,16 +12,16 @@ import scala.util.Try
 
 case class FemurRegistration(dataLocation: String) extends RegistrationTask[_3D, TriangleMesh] {
 
-  val fishes = Path(dataLocation).toDirectory.files.filter(f => f.name.startsWith("femur") && f.name.endsWith(".stl")).toIndexedSeq.sortBy(_.name)
+  val femurs = Path(dataLocation).toDirectory.files.filter(f => f.name.startsWith("femur") && f.name.endsWith(".stl")).toIndexedSeq.sortBy(_.name)
   val outputDirectory = Path(dataLocation) / "registered"
 
-  override def template: TriangleMesh[_3D] = MeshIO.readMesh(fishes.head.jfile).get
+  override def template: TriangleMesh[_3D] = MeshIO.readMesh(femurs.head.jfile).get
 
-  override def targets: Seq[RegistrationTarget[_3D, TriangleMesh]] = fishes.tail.map { fish =>
+  override def targets: Seq[RegistrationTarget[_3D, TriangleMesh]] = femurs.tail.map { femur =>
     new RegistrationTarget[_3D, TriangleMesh] with HasLandmarks[_3D] {
-      def id = fish.name
-      def target = MeshIO.readMesh(fish.jfile).get
-      override def landmarks: Seq[Landmark[_3D]] = LandmarkIO.readLandmarksJson3D(new File(fish.parent.jfile, fish.name.replace(".stl", ".json"))).get
+      def id = femur.name
+      def target = MeshIO.readMesh(femur.jfile).get
+      override def landmarks: Seq[Landmark[_3D]] = LandmarkIO.readLandmarksJson3D(new File(femur.parent.jfile, femur.name.replace(".stl", ".json"))).get
     }
   }
 

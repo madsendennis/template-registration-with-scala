@@ -12,7 +12,7 @@ import scalismo.geometry.{NDSpace, Point}
  */
 class CPDFactory[D: NDSpace](
     val templatePoints: Seq[Point[D]],
-    val lamdba: Double = 2,
+    val lambda: Double = 2,
     val beta: Double = 2,
     val w: Double = 0
 )(
@@ -24,6 +24,9 @@ class CPDFactory[D: NDSpace](
   val G: DenseMatrix[Double] = initializeKernelMatrixG(templatePoints, beta)
   val template: DenseMatrix[Double] = dataConverter.toMatrix(templatePoints)
 
+  require(0.0<=w && w<=1.0)
+  require(beta>0)
+  require(lambda>0)
   /**
     * Initialize G matrix - formula in paper fig. 4
     *

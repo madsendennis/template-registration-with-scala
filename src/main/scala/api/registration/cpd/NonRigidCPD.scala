@@ -19,7 +19,7 @@ private[cpd] class NonRigidCPD[D: NDSpace](
     val Pt1 = sum(P, Axis._0)
     val Np = sum(P1)
 
-    val A: DenseMatrix[Double] = diag(P1) * G + lamdba * sigma2 * DenseMatrix.eye[Double](M)
+    val A: DenseMatrix[Double] = diag(P1) * G + lambda * sigma2 * DenseMatrix.eye[Double](M)
     val B: DenseMatrix[Double] = P * X - diag(P1) * Y
 
     val W = A \ B
