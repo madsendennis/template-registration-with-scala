@@ -101,12 +101,15 @@ class NonRigidOptimalStepICP(templateMesh: TriangleMesh[_3D],
       val p = template.pointSet.point(id)
       val cpOnSurface = target.operations.closestPointOnSurface(p)
       val cp = target.pointSet.findClosestPoint(cpOnSurface.point)
+      val intersectingPoints = template.operations.getIntersectionPoints(p, p - cpOnSurface.point).filter(f => f != p) // All intersecting points with the closest point vector
+      val closestIntersectingPoint = if (intersectingPoints.nonEmpty) intersectingPoints.map(ip => (p - ip).norm).min else Double.PositiveInfinity // Distance to closest intersecting point on template
       // TODO: Restructure if/else setup
+      // Use closest point for boundary and normal check as a heuristic as it is faster to check
+      // Use closest point on surface for everything else
       if (target.operations.pointIsOnBoundary(cp.id)) w(i) = 0.0
       else if ((target.vertexNormals.atPoint(cp.id) dot template.vertexNormals.atPoint(id)) <= 0) w(i) = 0.0 // TODO: Introduce "angle" hyperparameter
-      //      val ll = template.operations.getIntersectionPoints(p, p-cp.point).minBy(intersect => norm(p-intersect) )
-      //      else if() // TODO: Check if closest point intersect with surface
-      else w(i) = 1.0 // Set to 1 if a robust closest point is found
+      else if (closestIntersectingPoint < (p - cpOnSurface.point).norm) w(i) = 0.0 // TODO: Validate if check works
+      else w(i) = 1.0
       cpOnSurface
     }
     val cp = cpinfo.map(_.point)
