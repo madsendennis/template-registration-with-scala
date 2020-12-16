@@ -13,15 +13,12 @@ private[icp] class RigidICP[D: NDSpace](
                                          registrator: Registrator[D]
                                        ) {
   require(vectorizer.dim == 2 || vectorizer.dim == 3)
-  val N: Int = targetPoints.numberOfPoints
-  val target: UnstructuredPoints[D] = targetPoints
-
 
   def Registration(max_iteration: Int, tolerance: Double = 0.001): UnstructuredPoints[D] = {
     val sigmaInit = 0.0
 
-    val fit = (0 until max_iteration).foldLeft((icp.template, sigmaInit)) { (it, i) =>
-      val iter = Iteration(target, it._1)
+    val fit = (0 until max_iteration).foldLeft((icp.templatePoints, sigmaInit)) { (it, i) =>
+      val iter = Iteration(it._1, targetPoints)
       val distance = iter._2
       println(s"ICP, iteration: ${i}, variance: ${distance}")
       val TY = iter._1

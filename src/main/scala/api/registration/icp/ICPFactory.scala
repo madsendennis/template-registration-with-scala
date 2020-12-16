@@ -15,10 +15,6 @@ class ICPFactory[D: NDSpace](
                               implicit val vectorizer: Vectorizer[Point[D]],
                               registrator: Registrator[D]
                             ) {
-  val M: Int = templatePoints.numberOfPoints // num of template points
-  val dim: Int = vectorizer.dim // dimension
-  val template: UnstructuredPoints[D] = templatePoints
-
   def registerRigidly(targetPoints: UnstructuredPoints[D]): RigidICP[D] = {
     new RigidICP[D](targetPoints, this)
   }
