@@ -23,9 +23,9 @@ class ICPFactory[D: NDSpace](
     new RigidICP[D](targetPoints, this)
   }
 
-  def registerNonRigidly(targetPoints: PointSet[D]): RigidICP[D] = {
-    new NonRigidICP[D](targetPoints, this)
-  }
+//  def registerNonRigidly(targetPoints: PointSet[D]): RigidICP[D] = {
+//    new NonRigidICP[D](targetPoints, this)
+//  }
 
   def registerAffine(targetPoints: PointSet[D]): RigidICP[D] = {
     new AffineICP[D](targetPoints, this)

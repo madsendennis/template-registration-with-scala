@@ -1,10 +1,10 @@
 package api.registration
 
 import api.registration.cpd.CPDFactory
-import api.registration.icp.ICPFactory
+import api.registration.icp.{ICPFactory, NonRigidOptimalStepICP}
 import api.registration.utils.PointSequenceConverter
 import scalismo.common.{DiscreteDomain, DiscreteField, DomainWarp, PointSet, PointWithId, Vectorizer}
-import scalismo.geometry.{NDSpace, Point}
+import scalismo.geometry.{Landmark, NDSpace, Point, _3D}
 import scalismo.mesh.{TriangleMesh, TriangleMesh3D}
 
 import scala.language.higherKinds
@@ -23,6 +23,7 @@ class RigidICPRegistration[D: NDSpace, DDomain[A] <: DiscreteDomain[A]](
     warper.transformWithField(target, warpField)
   }
 }
+
 
 //class NonRigidICPRegistration[D: NDSpace, DDomain[A] <: DiscreteDomain[A]](
 //    template: DDomain[D],
