@@ -1,18 +1,16 @@
 package api.registration
 
-import api.registration.cpd.CPDFactory
-import api.registration.icp.{ICPFactory, NonRigidOptimalStepICP}
-import api.registration.utils.{PointSequenceConverter, Registrator}
+import api.registration.icp.ICPFactory
+import api.registration.utils.Registrator
 import scalismo.common.UnstructuredPoints.Create
-import scalismo.common.{DiscreteDomain, DiscreteField, DomainWarp, PointSet, PointWithId, UnstructuredPoints, Vectorizer}
-import scalismo.geometry.{Landmark, NDSpace, Point, _3D}
-import scalismo.mesh.{TriangleMesh, TriangleMesh3D}
+import scalismo.common._
+import scalismo.geometry.{NDSpace, Point}
 
 import scala.language.higherKinds
 
 class RigidICPRegistration[D: NDSpace, DDomain[A] <: DiscreteDomain[A]](
-    template: DDomain[D],
-    max_iterations: Int = 100)(implicit warper: DomainWarp[D, DDomain], vectorizer: Vectorizer[Point[D]], registration: Registrator[D], create: Create[D]) {
+                                                                         template: DDomain[D],
+                                                                         max_iterations: Int = 100)(implicit warper: DomainWarp[D, DDomain], vectorizer: Vectorizer[Point[D]], registration: Registrator[D], create: Create[D]) {
   val icp = new ICPFactory[D](UnstructuredPoints(template.pointSet.points.toIndexedSeq))
 
   def registrationMethod(targetPoints: UnstructuredPoints[D]) = icp.registerRigidly(targetPoints)

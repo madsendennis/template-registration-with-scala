@@ -20,7 +20,7 @@ private[icp] class RigidICP[D: NDSpace](
     val fit = (0 until max_iteration).foldLeft((icp.templatePoints, sigmaInit)) { (it, i) =>
       val iter = Iteration(it._1, targetPoints)
       val distance = iter._2
-      println(s"ICP, iteration: ${i}, variance: ${distance}")
+      println(s"ICP, iteration: ${i}, distance: ${distance}")
       val TY = iter._1
       val diff = abs(distance - it._2)
       if (diff < tolerance) {
