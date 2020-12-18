@@ -23,7 +23,7 @@ object NonRigidICPRegistration extends App {
   val nicp = new NonRigidICPwithGPMMTriangle3D(gpmm, target) // Without landmarks
 
   val t10 = System.currentTimeMillis()
-  val fit = nicp.Registration(50, 0.0000001)
+  val fit = nicp.Registration(10, 0.0000001)
   val t11 = System.currentTimeMillis()
   println(s"Fitting time: ${(t11 - t10) / 1000.0} sec.")
 

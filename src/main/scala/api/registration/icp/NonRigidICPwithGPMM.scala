@@ -2,7 +2,7 @@ package api.registration.icp
 
 import api.registration.utils.NonRigidClosestPointRegistrator._
 import breeze.linalg.DenseVector
-import breeze.numerics.abs
+import breeze.numerics.{abs, pow}
 import scalismo.common.{DiscreteDomain, PointId, UnstructuredPointsDomain, Vectorizer}
 import scalismo.geometry._
 import scalismo.mesh.TriangleMesh
@@ -15,24 +15,31 @@ class NonRigidICPwithGPMM[D: NDSpace, DDomain[D] <: DiscreteDomain[D]](
                                                                         implicit val vectorizer: Vectorizer[Point[D]]
                                                                       ) {
   private val initialPars = DenseVector.zeros[Double](gpmm.rank)
+  private val template = gpmm.reference
+  private val mindist = template.pointSet.points.toSeq.map { p => (template.pointSet.findNClosestPoints(p, 2).last.point - p).norm }.min
 
-  def Registration(max_iteration: Int, tolerance: Double = 0.001): DDomain[D] = {
-    val sigma2 = 1.0
+  private val sigmaDefault = Seq(mindist * 5, mindist * 2) ++ (0 until 5).map(i => mindist / pow(10, i))
 
-    val fit = (0 until max_iteration).foldLeft((initialPars, Double.PositiveInfinity)) { (it, i) =>
-      val iter = Iteration(it._1, target, sigma2)
-      val distance = iter._2
-      println(s"ICP, iteration: ${i}, distance: ${distance}")
-      val pars = iter._1
-      val diff = abs(distance - it._2)
-      if (diff < tolerance) {
-        println(s"Converged, difference in steps: ${diff}")
-        return gpmm.instance(pars)
-      } else {
-        iter
+  def Registration(max_iteration: Int, tolerance: Double = 0.001, sigma2: Seq[Double] = sigmaDefault): DDomain[D] = {
+    val fit = sigma2.zipWithIndex.foldLeft(initialPars) { (pars, config) =>
+      val s = config._1
+      val j = config._2
+      val innerFit = (0 until max_iteration).foldLeft((pars, Double.PositiveInfinity)) { (it, i) =>
+        val iter = Iteration(it._1, target, s)
+        val distance = iter._2
+        println(s"ICP, iteration: ${j * max_iteration + i}/${max_iteration * sigma2.length}, sigma2: ${s}, average distance to target: ${distance}")
+        val pars = iter._1
+        val diff = abs(distance - it._2)
+        if (diff < tolerance) {
+          println(s"Converged, difference in steps: ${diff}")
+          return gpmm.instance(pars)
+        } else {
+          iter
+        }
       }
+      innerFit._1
     }
-    gpmm.instance(fit._1)
+    gpmm.instance(fit)
   }
 
   def getCorrespondence(template: DDomain[D], target: DDomain[D]): (Seq[(PointId, Point[D], Double)], Double) = {
