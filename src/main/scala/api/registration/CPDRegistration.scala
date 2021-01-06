@@ -20,8 +20,8 @@ class RigidCPDRegistration[D: NDSpace, DDomain[A] <: DiscreteDomain[A]](
   def register(target: DDomain[D]): DDomain[D] = {
     val registrationTask = registrationMethod(target.pointSet.points.toSeq)
     val registration = registrationTask.Registration(max_iterations)
-    val warpField = DiscreteField(target, target.pointSet.points.toIndexedSeq.zip(registration).map { case (a, b) => b - a })
-    warper.transformWithField(target, warpField)
+    val warpField = DiscreteField(template, template.pointSet.points.toIndexedSeq.zip(registration).map { case (a, b) => b - a })
+    warper.transformWithField(template, warpField)
   }
 }
 
