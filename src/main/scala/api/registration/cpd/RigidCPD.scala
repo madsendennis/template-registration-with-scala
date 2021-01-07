@@ -70,8 +70,7 @@ private[cpd] class RigidCPD[D: NDSpace](
       }
       vec
     }
-
-    val c = w / (1 - w) * math.pow((2 * math.Pi * sigma2), dim / 2) * (M / N)
+    val c = w / (1 - w) * math.pow((2.0 * math.Pi * sigma2), dim.toDouble / 2.0) * (M.toDouble / N.toDouble)
     val denRow = DenseMatrix(sum(P, Axis._0).t)
     val den = tile(denRow, M, 1) + c
 
