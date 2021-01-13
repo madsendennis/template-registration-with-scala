@@ -14,7 +14,7 @@ class GPMMRegistration[D: NDSpace, DDomain[A] <: DiscreteDomain[A]](
     lambda: Double = 2,
     w: Double = 0,
     max_iterations: Int = 100)(implicit warper: DomainWarp[D, DDomain], vectorizer: Vectorizer[Point[D]], pointSequenceConverter: PointSequenceConverter[D]) {
-  val cpd = new NonRigidCPDwithGPMMnew(gpmm, target, lambda, w, max_iterations)
+  val cpd = new NonRigidCPDwithGPMM(gpmm, target, lambda, w, max_iterations)
 
   def registrationMethod(): DDomain[D] = cpd.Registration()
 

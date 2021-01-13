@@ -6,10 +6,10 @@ import java.io.File
 import api.registration.{GPMMRegistration, NonRigidCPDRegistration}
 import api.registration.cpd.NonRigidCPDwithGPMM
 import scalismo.common.interpolation.NearestNeighborInterpolator
-import scalismo.common.{EuclideanSpace, Field, UnstructuredPointsDomain}
+import scalismo.common.{EuclideanSpace, Field, RealSpace, UnstructuredPointsDomain}
 import scalismo.geometry.{EuclideanVector, Point, _3D}
 import scalismo.io.{MeshIO, StatisticalModelIO}
-import scalismo.kernels.{DiagonalKernel, GaussianKernel}
+import scalismo.kernels.{DiagonalKernel, GaussianKernel, PDKernel}
 import scalismo.mesh.TriangleMesh
 import scalismo.statisticalmodel.{GaussianProcess, LowRankGaussianProcess, PointDistributionModel, StatisticalMeshModel}
 import scalismo.ui.api.ScalismoUI
@@ -17,7 +17,7 @@ import scalismo.ui.api.ScalismoUI
 object NonRigidCPDwithGPMMRegistrationDemo extends App {
   scalismo.initialize()
 
-//  val decimatedPoints = 50
+//  val decimatedPoints = 200
 
 //  val template = MeshIO.readMesh(new File("data/femur_reference.stl")).get.operations.decimate(decimatedPoints)
 //  val target = template
@@ -34,16 +34,16 @@ object NonRigidCPDwithGPMMRegistrationDemo extends App {
     val k = DiagonalKernel(GaussianKernel[_3D](50) * 1, 3)
     val gp = GaussianProcess[_3D, EuclideanVector[_3D]](zeroMean, k)
     val lowRankGP = LowRankGaussianProcess.approximateGPCholesky(ref, gp, relativeTolerance = 0.01, interpolator = NearestNeighborInterpolator())
-    val model = PointDistributionModel[_3D, TriangleMesh](ref, lowRankGP)
+    val model = PointDistributionModel[_3D, TriangleMesh](ref, lowRankGP).truncate(math.min(lowRankGP.rank, template.pointSet.numberOfPoints*2))
     StatisticalModelIO.writeStatisticalTriangleMeshModel3D(model, gpmmFile)
     model
   }
+  println(s"Model rank: ${gpmm.rank}")
 
   println(s"Template points: ${template.pointSet.numberOfPoints}, triangles: ${template.triangles.length}")
   println(s"Target points: ${target.pointSet.numberOfPoints}, triangles: ${target.triangles.length}")
 
-  val cpd = new GPMMRegistration[_3D, TriangleMesh](gpmm, target, lambda = 2, w = 0.0, max_iterations = 100)
-
+  val cpd = new GPMMRegistration[_3D, TriangleMesh](gpmm, target, lambda = 2, w = 0.0, max_iterations = 50)
 
   val t10 = System.currentTimeMillis()
   val fit = cpd.register()

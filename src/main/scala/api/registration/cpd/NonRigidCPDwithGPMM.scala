@@ -1,10 +1,13 @@
 package api.registration.cpd
 
-import breeze.linalg.{Axis, DenseMatrix, DenseVector, sum}
+import breeze.linalg.{Axis, DenseMatrix, DenseVector, sum, tile}
 import breeze.numerics.pow
-import scalismo.common.{DiscreteDomain, PointId, Vectorizer}
+import scalismo.common.interpolation.NearestNeighborInterpolator
+import scalismo.common.{DiscreteDomain, DomainWarp, PointId, Vectorizer}
 import scalismo.geometry._
 import scalismo.statisticalmodel.PointDistributionModel
+
+// Direct implementation of CPD with loops over points instead of matrix multiplications + GPMM instead of using the G matrix
 
 class NonRigidCPDwithGPMM[D: NDSpace, DDomain[D] <: DiscreteDomain[D]](
                                                                         val gpmm: PointDistributionModel[D, DDomain],
@@ -13,7 +16,8 @@ class NonRigidCPDwithGPMM[D: NDSpace, DDomain[D] <: DiscreteDomain[D]](
                                                                         val w: Double,
                                                                         val max_iteration: Int,
                                                                       )(
-                                                                        implicit val vectorizer: Vectorizer[Point[D]]
+                                                                        implicit val vectorizer: Vectorizer[Point[D]],
+                                                                        domainWarper: DomainWarp[D, DDomain]
                                                                       ) {
   println("Clean version")
   require(lambda > 0)
@@ -96,22 +100,22 @@ class NonRigidCPDwithGPMM[D: NDSpace, DDomain[D] <: DiscreteDomain[D]](
   }
 
   def getCorrespondence(template: DDomain[D], target: DDomain[D], sigma2: Double): (Seq[(PointId, Point[D], Double)], Double) = {
-    // Need to make an estimation of W = ((G+lambda*sigma2*d(P1)^-1)^-1)*(d(P1)^-1*PX-Y)
-
     // TODO: avoid spanning the full p matrix
     val tmpPoints = template.pointSet.points.toSeq
     val tarPoints = target.pointSet.points.toSeq
-    val P = DenseMatrix.zeros[Double](M,N)
+
+    val Punscaled = DenseMatrix.zeros[Double](M,N)
     tmpPoints.indices.foreach { m =>
       val pm = tmpPoints(m)
       tarPoints.indices.foreach { n =>
         val pn = tarPoints(n)
-        val div = template.pointSet.points.toSeq.map { minner =>
-          probability(minner, pn, sigma2)
-        }.sum
-        P(m,n) = probability(pm, pn, sigma2) / div
+        Punscaled(m,n) = probability(pm, pn, sigma2)
       }
     }
+    val denRow = DenseMatrix(sum(Punscaled, Axis._0).t)
+    val den = tile(denRow, M, 1) //+ c
+
+    val P = Punscaled /:/ den
 
     val P1 = sum(P, Axis._1)
     val Pt1 = sum(P, Axis._0).t
@@ -124,19 +128,19 @@ class NonRigidCPDwithGPMM[D: NDSpace, DDomain[D] <: DiscreteDomain[D]](
     }
 
     // Using approximated GPMM
-//    val GW: Seq[DenseVector[Double]] = (0 until template.pointSet.numberOfPoints).map{ m=>
-//      val res = (0 until template.pointSet.numberOfPoints).map { minner =>
-//        gpmm.gp.cov(PointId(m), PointId(minner))*W(minner)
-//      }
-//      sum(res)
-//    }
-    // Using G matrix
     val GW: Seq[DenseVector[Double]] = (0 until template.pointSet.numberOfPoints).map{ m=>
       val res = (0 until template.pointSet.numberOfPoints).map { minner =>
-        G(m, minner) * W(minner)
+        gpmm.gp.cov(PointId(m), PointId(minner))*W(minner)
       }
       sum(res)
     }
+    // Using G matrix
+//    val GW: Seq[DenseVector[Double]] = (0 until template.pointSet.numberOfPoints).map{ m=>
+//      val res = (0 until template.pointSet.numberOfPoints).map { minner =>
+//        G(m, minner) * W(minner)
+//      }
+//      sum(res)
+//    }
 
     val deform: Seq[Point[D]] = template.pointSet.points.toSeq.zip(GW).map{case (p,d) => p+vectorizer.unvectorize(d).toVector}
 
@@ -160,17 +164,10 @@ class NonRigidCPDwithGPMM[D: NDSpace, DDomain[D] <: DiscreteDomain[D]](
     val cp = cpinfo.filter(_._3 == 1.0).map(f => (f._1, f._2)).toIndexedSeq
 
 
-    val posteriorLMnoise = 1e-5
+    val posteriorLMnoise = 1e-15
 
-    val posteriorMean = gpmm.posterior(cp, posteriorLMnoise).mean
+    val posteriorMean = gpmm.newReference(instance, NearestNeighborInterpolator()).posterior(cp, posteriorLMnoise).mean
+//    val posteriorMean = gpmm.posterior(cp, posteriorLMnoise).mean
     (gpmm.coefficients(posteriorMean), newSigma2)
   }
 }
-
-
-//class NonRigidCPDwithGPMMUnstructuredPointsDomain3D(gpmm: PointDistributionModel[_3D, UnstructuredPointsDomain],
-//                                                    target: UnstructuredPointsDomain[_3D]) extends NonRigidCPDwithGPMM[_3D, UnstructuredPointsDomain](gpmm, target) {
-//  override def getCorrespondence(template: UnstructuredPointsDomain[_3D], target: UnstructuredPointsDomain[_3D]): (Seq[(PointId, Point[_3D], Double)], Double) = {
-//    ClosestPointUnstructuredPointsDomain3D.closestPointCorrespondence(template, target)
-//  }
-//}
