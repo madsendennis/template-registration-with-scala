@@ -13,7 +13,7 @@ trait PointSequenceConverter[D] {
   def toMatrix(points: Seq[Point[D]])(implicit vectorizer: Vectorizer[Point[D]]): DenseMatrix[Double] = {
     val dim: Int = vectorizer.dim
     val mat = DenseMatrix.zeros[Double](points.length, dim)
-    points.zipWithIndex.foreach {
+    points.zipWithIndex.par.foreach {
       case (p, i) =>
         mat(i, ::) := vectorizer.vectorize(p).t
     }

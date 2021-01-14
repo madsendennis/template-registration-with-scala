@@ -29,20 +29,14 @@ private[cpd] class NonRigidCPD[D: NDSpace](
     val Pt1 = sum(P, Axis._0)
     val Np = sum(P1)
 
-//    val A: DenseMatrix[Double] = diag(P1) * G + lambda * sigma2 * DenseMatrix.eye[Double](M) // diag(P1)
-//    val B: DenseMatrix[Double] = P * X - diag(P1) * Y
     val myG = G
-    val diagP1 = diag(P1)
     val diagP1inv = inv(diag(P1))
     val PX = P*X
-//    val A: DenseMatrix[Double] = diagP1*G+lambda*sigma2*DenseMatrix.eye[Double](M)
-//    val B: DenseMatrix[Double] = PX-diagP1*Y
 
     val A: DenseMatrix[Double] = G+lambda*sigma2*diagP1inv
     val B: DenseMatrix[Double] = diagP1inv*PX-Y
 
     val W = A \ B
-    val Wnew  = (diagP1inv*PX-Y)
     // Update Point Cloud
     val deform = myG * W
     val TY = Y + deform
