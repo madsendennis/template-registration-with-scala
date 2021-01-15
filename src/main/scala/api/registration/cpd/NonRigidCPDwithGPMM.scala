@@ -2,6 +2,7 @@ package api.registration.cpd
 
 import api.registration.utils.PointSequenceConverter
 import breeze.linalg.{Axis, DenseMatrix, DenseVector, sum, tile}
+import scalismo.common.interpolation.NearestNeighborInterpolator
 import scalismo.common.{DiscreteDomain, DomainWarp, Vectorizer}
 import scalismo.geometry._
 import scalismo.statisticalmodel.PointDistributionModel
@@ -107,8 +108,8 @@ class NonRigidCPDwithGPMM[D: NDSpace, DDomain[D] <: DiscreteDomain[D]](
     val (closestPoints, pmat: DenseMatrix[Double]) = getCorrespondence(templatePoints, target, sigma2)
     val cp = instance.pointSet.pointIds.toSeq.zip(closestPoints).toIndexedSeq
 
-    //    val posteriorMean = gpmm.newReference(instance, NearestNeighborInterpolator()).posterior(cp, sigma2*lambda).mean
-    val posteriorMean = gpmm.posterior(cp, sigma2 * lambda).mean
+        val posteriorMean = gpmm.newReference(instance, NearestNeighborInterpolator()).posterior(cp, sigma2*lambda).mean
+//    val posteriorMean = gpmm.posterior(cp, sigma2 * lambda).mean
 
     val TY = dataConverter.toMatrix(posteriorMean.pointSet.points.toSeq)
     val X = dataConverter.toMatrix(target)
