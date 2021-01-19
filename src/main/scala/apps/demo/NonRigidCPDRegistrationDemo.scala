@@ -15,6 +15,9 @@ object NonRigidCPDRegistrationDemo extends App {
   val template = MeshIO.readMesh(new File("data/femur_reference.stl")).get
   val target = MeshIO.readMesh(new File("data/femur_target.stl")).get
 
+//  val template = MeshIO.readMesh(new File("data/femur_tmp_51.stl")).get
+//  val target = MeshIO.readMesh(new File("data/femur_tar_101.stl")).get
+
   println(s"Template points: ${template.pointSet.numberOfPoints}, triangles: ${template.triangles.length}")
   println(s"Target points: ${target.pointSet.numberOfPoints}, triangles: ${target.triangles.length}")
 

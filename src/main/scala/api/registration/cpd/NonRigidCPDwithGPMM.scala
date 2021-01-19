@@ -86,23 +86,32 @@ class NonRigidCPDwithGPMM[D: NDSpace, DDomain[D] <: DiscreteDomain[D]](
     P /:/ den
   }
 
+
+
   def getCorrespondence(template: Seq[Point[D]], target: Seq[Point[D]], sigma2: Double): (Seq[(Point[D],MultivariateNormalDistribution)], DenseMatrix[Double]) = {
+    val D = vectorizer.dim
     val P = Expectation(template, target, sigma2)
+    val P1inv = 1.0/sum(P, Axis._1)
 
-    val X = DenseMatrix(target.map(p => p.toArray).toArray:_*)
-    val Yhat = DenseMatrix(template.map(p => p.toArray).toArray:_*)
-
-    val P1 = sum(P, Axis._1)
-
-    val D = template.head.dimensionality
     def d2MVND(d: Double): MultivariateNormalDistribution = {
       MultivariateNormalDistribution(DenseVector.zeros[Double](D), DenseMatrix.eye[Double](D)*d)
     }
 
-    val defo = (diag(P1.map(d=>1.0/d))*P*X-Yhat).t //.t for simpler vector creation below
-    val deform = (0 until defo.cols).map(i => defo(::,i)).map(vectorizer.unvectorize).map(_.toVector)
+    val deform = template.zipWithIndex.par.map{case (y, i) =>
+      val xscale = target.zipWithIndex.map{case (x, j) =>
+        P1inv(i)*P(i,j)*x.toBreezeVector
+      }
+      vectorizer.unvectorize(sum(xscale)-y.toBreezeVector).toVector
+    }
+
+//    val X = DenseMatrix(target.map(p => p.toArray).toArray:_*)
+//    val Yhat = DenseMatrix(template.map(p => p.toArray).toArray:_*)
+//    val defo = (diag(P1.map(d=>1.0/d))*P*X-Yhat).t //.t for simpler vector creation below
+
+
+//    val deform = (0 until defo.cols).map(i => defo(::,i)).map(vectorizer.unvectorize).map(_.toVector)
     val td = template.zip(deform).map{case (p,d) => p+d}
-    val out = td.zipWithIndex.map{case (p,i) => (p, d2MVND(lambda*sigma2/P1(i)))}
+    val out = td.zipWithIndex.map{case (p,i) => (p, d2MVND(lambda*sigma2*P1inv(i)))}
     (out, P)
   }
 
@@ -111,6 +120,7 @@ class NonRigidCPDwithGPMM[D: NDSpace, DDomain[D] <: DiscreteDomain[D]](
     val templatePoints = instance.pointSet.points.toSeq
 
     val (closestPoints, pmat: DenseMatrix[Double]) = getCorrespondence(templatePoints, target, sigma2)
+
     val cp = instance.pointSet.pointIds.toSeq.zip(closestPoints).map(t => (t._1,t._2._1,t._2._2)).toIndexedSeq
 
     val posteriorMean = gpmm.newReference(instance, NearestNeighborInterpolator()).posterior(cp).mean
