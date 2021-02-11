@@ -66,7 +66,7 @@ private[cpd] class RigidCPD[D: NDSpace](
       val vec = X(*, ::).map { n =>
         val y = m.copy
         val x = n.copy
-        math.exp(-1 / (2 * sigma2) * pow(norm(x - y), 2))
+        math.exp(-pow(norm(x - y), 2) / (2 * sigma2))
       }
       vec
     }

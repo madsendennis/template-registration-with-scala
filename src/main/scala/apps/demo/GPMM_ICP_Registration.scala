@@ -8,14 +8,13 @@ import api.registration.utils.GPMMHelper
 import scalismo.io.MeshIO
 import scalismo.ui.api.ScalismoUI
 
-object NonRigidICPRegistration extends App {
+object GPMM_ICP_Registration extends App {
   scalismo.initialize()
 
   val template = MeshIO.readMesh(new File("data/femur_reference.stl")).get
   val target = MeshIO.readMesh(new File("data/femur_target.stl")).get
 
   val gpmm = GPMMHelper.automaticGPMMfromTemplate(template)
-
 
   println(s"Template points: ${template.pointSet.numberOfPoints}, triangles: ${template.triangles.length}")
   println(s"Target points: ${target.pointSet.numberOfPoints}, triangles: ${target.triangles.length}")

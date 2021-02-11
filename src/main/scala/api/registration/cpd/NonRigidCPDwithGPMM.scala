@@ -1,22 +1,22 @@
 package api.registration.cpd
 
 import api.registration.utils.PointSequenceConverter
-import breeze.linalg.{Axis, DenseMatrix, DenseVector, diag, sum, tile}
+import breeze.linalg.{Axis, DenseMatrix, DenseVector, sum, tile}
 import scalismo.common.interpolation.NearestNeighborInterpolator
 import scalismo.common.{DiscreteDomain, DomainWarp, Vectorizer}
 import scalismo.geometry._
 import scalismo.statisticalmodel.{MultivariateNormalDistribution, PointDistributionModel}
 
 class NonRigidCPDwithGPMM[D: NDSpace, DDomain[D] <: DiscreteDomain[D]](
-                                                                        val gpmm: PointDistributionModel[D, DDomain],
-                                                                        val lambda: Double,
-                                                                        val w: Double,
-                                                                        val max_iteration: Int,
-                                                                      )(
-                                                                        implicit val vectorizer: Vectorizer[Point[D]],
-                                                                        domainWarper: DomainWarp[D, DDomain],
-                                                                        dataConverter: PointSequenceConverter[D]
-                                                                      ) {
+                                                                     val gpmm: PointDistributionModel[D, DDomain],
+                                                                     val lambda: Double,
+                                                                     val w: Double,
+                                                                     val max_iteration: Int,
+                                                                   )(
+                                                                     implicit val vectorizer: Vectorizer[Point[D]],
+                                                                     domainWarper: DomainWarp[D, DDomain],
+                                                                     dataConverter: PointSequenceConverter[D]
+                                                                   ) {
   println("New version using GPMM as G and optimizing loops")
   require(lambda > 0)
   require(0 <= w && w < 1.0)
@@ -32,7 +32,7 @@ class NonRigidCPDwithGPMM[D: NDSpace, DDomain[D] <: DiscreteDomain[D]](
       println(s"CPD, iteration: ${i}/${max_iteration}, sigma2: ${sigma2}")
       val iter = Iteration(parsInit, target, sigma2)
       val pars = iter._1
-      val sigmaDiff = sigma2- iter._2
+      val sigmaDiff = sigma2 - iter._2
       if (sigmaDiff < tolerance) {
         println(s"Converged")
         return pars
@@ -73,7 +73,7 @@ class NonRigidCPDwithGPMM[D: NDSpace, DDomain[D] <: DiscreteDomain[D]](
     val M = template.length
     val N = target.length
     // TODO: Approximate using nyström
-    val P: DenseMatrix[Double] = DenseMatrix.zeros[Double](M,N)
+    val P: DenseMatrix[Double] = DenseMatrix.zeros[Double](M, N)
     template.zipWithIndex.par.foreach { case (y, i) =>
       target.zipWithIndex.foreach { case (x, j) =>
         P(i, j) = gaussKernel(x, y, sigma2)
@@ -87,31 +87,23 @@ class NonRigidCPDwithGPMM[D: NDSpace, DDomain[D] <: DiscreteDomain[D]](
   }
 
 
-
-  def getCorrespondence(template: Seq[Point[D]], target: Seq[Point[D]], sigma2: Double): (Seq[(Point[D],MultivariateNormalDistribution)], DenseMatrix[Double]) = {
+  def getCorrespondence(template: Seq[Point[D]], target: Seq[Point[D]], sigma2: Double): (Seq[(Point[D], MultivariateNormalDistribution)], DenseMatrix[Double]) = {
     val D = vectorizer.dim
     val P = Expectation(template, target, sigma2)
-    val P1inv = 1.0/sum(P, Axis._1)
+    val P1inv = 1.0 / sum(P, Axis._1)
 
     def d2MVND(d: Double): MultivariateNormalDistribution = {
-      MultivariateNormalDistribution(DenseVector.zeros[Double](D), DenseMatrix.eye[Double](D)*d)
+      MultivariateNormalDistribution(DenseVector.zeros[Double](D), DenseMatrix.eye[Double](D) * d)
     }
 
-    val deform = template.zipWithIndex.par.map{case (y, i) =>
-      val xscale = target.zipWithIndex.map{case (x, j) =>
-        P1inv(i)*P(i,j)*x.toBreezeVector
+    val deform = template.zipWithIndex.par.map { case (y, i) =>
+      val xscale = target.zipWithIndex.map { case (x, j) =>
+        P1inv(i) * P(i, j) * x.toBreezeVector
       }
-      vectorizer.unvectorize(sum(xscale)-y.toBreezeVector).toVector
+      vectorizer.unvectorize(sum(xscale) - y.toBreezeVector).toVector
     }
-
-//    val X = DenseMatrix(target.map(p => p.toArray).toArray:_*)
-//    val Yhat = DenseMatrix(template.map(p => p.toArray).toArray:_*)
-//    val defo = (diag(P1.map(d=>1.0/d))*P*X-Yhat).t //.t for simpler vector creation below
-
-
-//    val deform = (0 until defo.cols).map(i => defo(::,i)).map(vectorizer.unvectorize).map(_.toVector)
-    val td = template.zip(deform).map{case (p,d) => p+d}
-    val out = td.zipWithIndex.map{case (p,i) => (p, d2MVND(lambda*sigma2*P1inv(i)))}
+    val td = template.zip(deform).map { case (p, d) => p + d }
+    val out = td.zipWithIndex.map { case (p, i) => (p, d2MVND(lambda * sigma2 * P1inv(i))) }
     (out, P)
   }
 
@@ -121,10 +113,10 @@ class NonRigidCPDwithGPMM[D: NDSpace, DDomain[D] <: DiscreteDomain[D]](
 
     val (closestPoints, pmat: DenseMatrix[Double]) = getCorrespondence(templatePoints, target, sigma2)
 
-    val cp = instance.pointSet.pointIds.toSeq.zip(closestPoints).map(t => (t._1,t._2._1,t._2._2)).toIndexedSeq
+    val cp = instance.pointSet.pointIds.toSeq.zip(closestPoints).map(t => (t._1, t._2._1, t._2._2)).toIndexedSeq
 
     val posteriorMean = gpmm.newReference(instance, NearestNeighborInterpolator()).posterior(cp).mean
-//    val posteriorMean = gpmm.posterior(cp, sigma2 * lambda).mean
+    //    val posteriorMean = gpmm.posterior(cp, sigma2 * lambda).mean
 
     val TY = dataConverter.toMatrix(posteriorMean.pointSet.points.toSeq)
     val X = dataConverter.toMatrix(target)

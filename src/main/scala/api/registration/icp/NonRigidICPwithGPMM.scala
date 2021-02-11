@@ -32,12 +32,12 @@ class NonRigidICPwithGPMM[D: NDSpace, DDomain[D] <: DiscreteDomain[D]](
         println(s"ICP, iteration: ${j * max_iteration + i}/${max_iteration * sigma2.length}, sigma2: ${s}, average distance to target: ${distance}")
         val pars = iter._1
         val diff = abs(distance - it._2)
-//        if (diff < tolerance) {
-//          println(s"Converged, difference in steps: ${diff}")
-//          return gpmm.instance(pars)
-//        } else {
+        if (diff < tolerance) {
+          println(s"Converged, difference in steps: ${diff}")
+          return gpmm.instance(pars)
+        } else {
           iter
-//        }
+        }
       }
       innerFit._1
     }

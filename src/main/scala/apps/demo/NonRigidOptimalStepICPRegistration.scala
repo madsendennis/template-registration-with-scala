@@ -3,7 +3,7 @@ package apps.demo
 import java.awt.Color
 import java.io.File
 
-import api.registration.icp.NonRigidOptimalStepICP
+import api.registration.icp.NonRigidOptimalStepICP_A
 import scalismo.io.{LandmarkIO, MeshIO}
 import scalismo.ui.api.ScalismoUI
 
@@ -19,9 +19,10 @@ object NonRigidOptimalStepICPRegistration extends App {
   println(s"Template points: ${template.pointSet.numberOfPoints}, triangles: ${template.triangles.length}")
   println(s"Target points: ${target.pointSet.numberOfPoints}, triangles: ${target.triangles.length}")
 
-  //  val nicp = NonRigidICPoptimalStep(template, target, templateLms, targetLms) // With landmarks
   val t00 = System.currentTimeMillis()
-  val nicp = new NonRigidOptimalStepICP(template, target, Seq(), Seq()) // Without landmarks
+  //  val nicp = new NonRigidOptimalStepICP_T(template, target, Seq(), Seq()) // Without landmarks
+  //  val nicp = NonRigidICPoptimalStep_A(template, target, templateLms, targetLms) // With landmarks
+  val nicp = new NonRigidOptimalStepICP_A(template, target, Seq(), Seq()) // Without landmarks
   val t01 = System.currentTimeMillis()
   println(s"Config time: ${(t01 - t00) / 1000} sec.")
 
@@ -29,7 +30,6 @@ object NonRigidOptimalStepICPRegistration extends App {
   val fit = nicp.Registration(10, 0.0000001)
   val t11 = System.currentTimeMillis()
   println(s"Fitting time: ${(t11 - t10) / 1000.0} sec.")
-
 
   println(s"Fit points: ${fit.pointSet.numberOfPoints}, triangles: ${fit.triangles.length}")
 
