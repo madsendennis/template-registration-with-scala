@@ -3,16 +3,15 @@ package apps.demo
 import java.awt.Color
 import java.io.File
 
-import api.registration.icp.NonRigidOptimalStepICP_A
+import api.registration.icp.{NonRigidOptimalStepICP_A, NonRigidOptimalStepICP_T}
 import scalismo.io.{LandmarkIO, MeshIO}
 import scalismo.ui.api.ScalismoUI
 
 object NonRigidOptimalStepICPRegistration extends App {
   scalismo.initialize()
 
-  val vertexDecimater = 50
-  val template = MeshIO.readMesh(new File("data/femur_reference.stl")).get.operations.decimate(vertexDecimater)
-  val target = MeshIO.readMesh(new File("data/femur_target.stl")).get.operations.decimate(vertexDecimater)
+  val template = MeshIO.readMesh(new File("data/femur_reference.stl")).get
+  val target = MeshIO.readMesh(new File("data/femur_target.stl")).get
   val templateLms = LandmarkIO.readLandmarksJson3D(new File("data/femur_reference.json")).get
   val targetLms = LandmarkIO.readLandmarksJson3D(new File("data/femur_target.json")).get
 
@@ -20,14 +19,16 @@ object NonRigidOptimalStepICPRegistration extends App {
   println(s"Target points: ${target.pointSet.numberOfPoints}, triangles: ${target.triangles.length}")
 
   val t00 = System.currentTimeMillis()
-  //  val nicp = new NonRigidOptimalStepICP_T(template, target, Seq(), Seq()) // Without landmarks
-  //  val nicp = NonRigidICPoptimalStep_A(template, target, templateLms, targetLms) // With landmarks
-  val nicp = new NonRigidOptimalStepICP_A(template, target, Seq(), Seq()) // Without landmarks
+
+  // Choose between ICP-A and ICP-T
+//    val nicp = new NonRigidOptimalStepICP_T(template, target, Seq(), Seq())
+  val nicp = new NonRigidOptimalStepICP_A(template, target, Seq(), Seq())
+
   val t01 = System.currentTimeMillis()
   println(s"Config time: ${(t01 - t00) / 1000} sec.")
 
   val t10 = System.currentTimeMillis()
-  val fit = nicp.Registration(10, 0.0000001)
+  val fit = nicp.Registration(2, 0.0000001)
   val t11 = System.currentTimeMillis()
   println(s"Fitting time: ${(t11 - t10) / 1000.0} sec.")
 
