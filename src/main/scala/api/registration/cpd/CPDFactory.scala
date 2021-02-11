@@ -42,7 +42,7 @@ class CPDFactory[D: NDSpace](
     val G: DenseMatrix[Double] = DenseMatrix.zeros[Double](M, M)
     (0 until M).map { i =>
       (0 until M).map { j =>
-        G(i, j) = math.exp(-1 / (2 * math.pow(beta, 2)) * (points(i) - points(j)).norm2)
+        G(i, j) = math.exp(-(points(i) - points(j)).norm2 / (2*math.pow(beta, 2)))
       }
     }
     G

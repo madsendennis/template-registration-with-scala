@@ -3,7 +3,8 @@ package api.registration.icp
 import api.registration.utils.NonRigidClosestPointRegistrator._
 import breeze.linalg.DenseVector
 import breeze.numerics.{abs, pow}
-import scalismo.common.{DiscreteDomain, PointId, UnstructuredPointsDomain, Vectorizer}
+import scalismo.common.interpolation.NearestNeighborInterpolator
+import scalismo.common.{DiscreteDomain, DomainWarp, PointId, UnstructuredPointsDomain, Vectorizer}
 import scalismo.geometry._
 import scalismo.mesh.TriangleMesh
 import scalismo.statisticalmodel.PointDistributionModel
@@ -12,7 +13,8 @@ class NonRigidICPwithGPMM[D: NDSpace, DDomain[D] <: DiscreteDomain[D]](
                                                                         val gpmm: PointDistributionModel[D, DDomain],
                                                                         val target: DDomain[D],
                                                                       )(
-                                                                        implicit val vectorizer: Vectorizer[Point[D]]
+                                                                        implicit val vectorizer: Vectorizer[Point[D]],
+                                                                        canWarp: DomainWarp[D, DDomain]
                                                                       ) {
   private val initialPars = DenseVector.zeros[Double](gpmm.rank)
   private val template = gpmm.reference
@@ -50,7 +52,7 @@ class NonRigidICPwithGPMM[D: NDSpace, DDomain[D] <: DiscreteDomain[D]](
     val instance = gpmm.instance(pars)
     val (cpinfo, dist) = getCorrespondence(instance, target)
     val cp = cpinfo.filter(_._3 == 1.0).map(f => (f._1, f._2)).toIndexedSeq
-    val posteriorMean = gpmm.posterior(cp, sigma2).mean
+    val posteriorMean = gpmm.newReference(instance, NearestNeighborInterpolator()).posterior(cp, sigma2).mean
     (gpmm.coefficients(posteriorMean), dist)
   }
 }

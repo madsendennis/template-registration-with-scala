@@ -1,7 +1,7 @@
 package api.registration.cpd
 
 import api.registration.utils.PointSequenceConverter
-import breeze.linalg.{Axis, DenseMatrix, DenseVector, diag, sum}
+import breeze.linalg.{Axis, DenseMatrix, DenseVector, diag, inv, sum}
 import scalismo.common.Vectorizer
 import scalismo.geometry.{NDSpace, Point}
 
@@ -13,18 +13,33 @@ private[cpd] class NonRigidCPD[D: NDSpace](
     dataConverter: PointSequenceConverter[D]
 ) extends RigidCPD[D](targetPoints, cpd) {
   import cpd._
+
+  def computeSigma2(template: Seq[Point[D]], target: Seq[Point[D]]): Double = {
+    val sumDist = template.toIndexedSeq.flatMap { pm =>
+      target.toIndexedSeq.map { pn =>
+        (pn - pm).norm2
+      }
+    }.sum
+    sumDist / (3 * template.length * target.length)
+  }
+
   override def Maximization(X: DenseMatrix[Double], Y: DenseMatrix[Double], P: DenseMatrix[Double], sigma2: Double): (DenseMatrix[Double], Double) = {
     // Update transform
     val P1: DenseVector[Double] = sum(P, Axis._1)
     val Pt1 = sum(P, Axis._0)
     val Np = sum(P1)
 
-    val A: DenseMatrix[Double] = diag(P1) * G + lambda * sigma2 * DenseMatrix.eye[Double](M)
-    val B: DenseMatrix[Double] = P * X - diag(P1) * Y
+    val myG = G
+    val diagP1inv = inv(diag(P1))
+    val PX = P*X
+
+    val A: DenseMatrix[Double] = G+lambda*sigma2*diagP1inv
+    val B: DenseMatrix[Double] = diagP1inv*PX-Y
 
     val W = A \ B
     // Update Point Cloud
-    val TY = Y + G * W
+    val deform = myG * W
+    val TY = Y + deform
 
     // Update variance
     /*
@@ -40,6 +55,11 @@ private[cpd] class NonRigidCPD[D: NDSpace](
     val trPXY: Double = sum(TY *:* (P * X))
 
     val updatedSigma2 = (xPx - 2 * trPXY + yPy) / (Np * dim)
+
+//    val Xtarget: Seq[Point[D]] = dataConverter.toPointSequence(X)(vectorizer)
+//    val Ytemp   = dataConverter.toPointSequence(TY)(vectorizer)
+//
+//    val updatedSigma2 = computeSigma2(Xtarget, Ytemp)
 
     (TY, updatedSigma2)
   }
