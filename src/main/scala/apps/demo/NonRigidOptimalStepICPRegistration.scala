@@ -10,9 +10,9 @@ import scalismo.ui.api.ScalismoUI
 object NonRigidOptimalStepICPRegistration extends App {
   scalismo.initialize()
 
-  val vertexDecimater = 500
+  val vertexDecimater = 50
   val template = MeshIO.readMesh(new File("data/femur_reference.stl")).get.operations.decimate(vertexDecimater)
-  val target = MeshIO.readMesh(new File("data/femur_target.stl")).get
+  val target = MeshIO.readMesh(new File("data/femur_target.stl")).get.operations.decimate(vertexDecimater)
   val templateLms = LandmarkIO.readLandmarksJson3D(new File("data/femur_reference.json")).get
   val targetLms = LandmarkIO.readLandmarksJson3D(new File("data/femur_target.json")).get
 
@@ -26,7 +26,7 @@ object NonRigidOptimalStepICPRegistration extends App {
   println(s"Config time: ${(t01 - t00) / 1000} sec.")
 
   val t10 = System.currentTimeMillis()
-  val fit = nicp.Registration(2, 0.0000001)
+  val fit = nicp.Registration(10, 0.0000001)
   val t11 = System.currentTimeMillis()
   println(s"Fitting time: ${(t11 - t10) / 1000.0} sec.")
 
