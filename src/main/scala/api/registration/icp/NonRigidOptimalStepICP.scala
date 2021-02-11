@@ -34,7 +34,7 @@ abstract class NonRigidOptimalStepICP(templateMesh: TriangleMesh[_3D],
   val M: CSCMatrix[Double] = InitializeMatrixM(edges)
 
   private val defaultAlpha: Seq[Double] = (1 to 10).scanLeft(1)((a, _) => (a * 2)).map(_.toDouble / 2).reverse // ...,8,4,2,1,0.5
-  private val defaultBeta: Seq[Double] = defaultAlpha.indices.map(_ => 0.0)
+  private val defaultBeta: Seq[Double] = defaultAlpha.indices.map(_ => 1.0)
 
   private def trianglesToEdges(triangles: IndexedSeq[TriangleCell]): IndexedSeq[(PointId, PointId)] = {
     triangles.flatMap { triangle =>
@@ -120,11 +120,14 @@ class NonRigidOptimalStepICP_T(templateMesh: TriangleMesh[_3D],
     val V = CSCHelper.DenseMatrix2CSCMatrix(dataConverter.toMatrix(template.pointSet.points.toSeq))
     val A1: CSCMatrix[Double] = M * alpha
     val A2: CSCMatrix[Double] = W * diag(SparseVector.fill(template.pointSet.numberOfPoints)(1.0))
+    val A3: CSCMatrix[Double] = CSCMatrix.zeros[Double](lmPointsOnTemplate.length, M.cols)
+    lmPointsOnTemplate.indices.foreach(i => A3(i,i) = 1.0)
 
     val B2: CSCMatrix[Double] = W * (U - V)
+    val B3: CSCMatrix[Double] = (UL-VL)*beta
 
-    val A = CSCHelper.vertcat(A1, A2)
-    val B = CSCHelper.vertcat(B1, B2)
+    val A = CSCHelper.vertcat(A1, A2, A3)
+    val B = CSCHelper.vertcat(B1, B2, B3)
     val X = (A \ B).toDenseMatrix
 
     val updatedPoints = dataConverter.toPointSequence(dataConverter.toMatrix(template.pointSet.points.toSeq) + X).toIndexedSeq
@@ -134,7 +137,7 @@ class NonRigidOptimalStepICP_T(templateMesh: TriangleMesh[_3D],
 }
 
 /*
- Implementation of the paper: "Optimal Step Nonrigid ICP Algorithms for Surface Registration"
+ Implementation of "N-ICP-A" from the paper: "Optimal Step Nonrigid ICP Algorithms for Surface Registration"
  */
 
 class NonRigidOptimalStepICP_A(templateMesh: TriangleMesh[_3D],
@@ -153,7 +156,7 @@ class NonRigidOptimalStepICP_A(templateMesh: TriangleMesh[_3D],
 
   private def ComputeMatrixD(points: Seq[Point[_3D]]): CSCMatrix[Double] = {
     val locn = points.length
-    val D: CSCMatrix[Double] = CSCMatrix.zeros[Double](locn, 4 * n) // Reference points each entry in D is a matrix (4nx3)
+    val D: CSCMatrix[Double] = CSCMatrix.zeros[Double](locn, 4 * n) // Reference points each entry in D is a matrix (4D)
     (0 until locn).foreach { i =>
       (0 until dim + 1).foreach { j =>
         val index = i * 4 + j
