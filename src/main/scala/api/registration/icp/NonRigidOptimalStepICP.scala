@@ -1,7 +1,7 @@
 package api.registration.icp
 
 import api.registration.utils.{CSCHelper, NonRigidClosestPointRegistrator, PointSequenceConverter}
-import breeze.linalg.{CSCMatrix, DenseMatrix, DenseVector, SparseVector, diag}
+import breeze.linalg.{CSCMatrix, SparseVector, diag}
 import scalismo.common.{DomainWarp, PointId, UnstructuredPoints3D, Vectorizer}
 import scalismo.geometry._
 import scalismo.mesh.{TriangleCell, TriangleMesh}
@@ -193,12 +193,7 @@ class NonRigidOptimalStepICP_A(templateMesh: TriangleMesh[_3D],
     val B = CSCHelper.vertcat(B1, B2, B3)
     val X = (A \ B).toDenseMatrix
 
-    val updatedPoints = template.pointSet.points.toIndexedSeq.zipWithIndex.map { case (p, i) =>
-      val x: DenseMatrix[Double] = X(i * 4 until i * 4 + 4, ::).t
-      val v: DenseVector[Double] = DenseVector[Double](p(0), p(1), p(2), 1.0)
-      val xv = (x * v)
-      vectorizer.unvectorize(xv)
-    }
+    val updatedPoints = dataConverter.toPointSequence(D * X).toIndexedSeq
 
     (template.copy(pointSet = UnstructuredPoints3D(updatedPoints)), dist)
   }
