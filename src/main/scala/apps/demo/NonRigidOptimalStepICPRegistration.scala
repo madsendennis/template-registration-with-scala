@@ -18,19 +18,14 @@ object NonRigidOptimalStepICPRegistration extends App {
   println(s"Template points: ${template.pointSet.numberOfPoints}, triangles: ${template.triangles.length}")
   println(s"Target points: ${target.pointSet.numberOfPoints}, triangles: ${target.triangles.length}")
 
-  val t00 = System.currentTimeMillis()
-
   // Choose between ICP-A and ICP-T
-//    val nicp = new NonRigidOptimalStepICP_T(template, target, Seq(), Seq())
-  val nicp = new NonRigidOptimalStepICP_A(template, target, Seq(), Seq())
+    val nicp = new NonRigidOptimalStepICP_T(template, target, Seq(), Seq())
+//  val nicp = new NonRigidOptimalStepICP_A(template, target, Seq(), Seq())
 
-  val t01 = System.currentTimeMillis()
-  println(s"Config time: ${(t01 - t00) / 1000} sec.")
-
-  val t10 = System.currentTimeMillis()
+  val t0 = System.currentTimeMillis()
   val fit = nicp.Registration(2, 0.0000001)
-  val t11 = System.currentTimeMillis()
-  println(s"Fitting time: ${(t11 - t10) / 1000.0} sec.")
+  val t1 = System.currentTimeMillis()
+  println(s"Fitting time: ${(t1 - t0) / 1000.0} sec.")
 
   println(s"Fit points: ${fit.pointSet.numberOfPoints}, triangles: ${fit.triangles.length}")
 

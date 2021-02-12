@@ -115,16 +115,16 @@ class NonRigidOptimalStepICP_T(templateMesh: TriangleMesh[_3D],
     val VL = CSCHelper.DenseMatrix2CSCMatrix(dataConverter.toMatrix(lmPointsOnTemplate))
 
     val U = CSCHelper.DenseMatrix2CSCMatrix(dataConverter.toMatrix(cp))
-    val WL = diag(SparseVector.fill(lmPointsOnTemplate.length)(1.0))
+    val WL = CSCHelper.eye(lmPointsOnTemplate.length)
     // N-ICP-T
     val V = CSCHelper.DenseMatrix2CSCMatrix(dataConverter.toMatrix(template.pointSet.points.toSeq))
     val A1: CSCMatrix[Double] = M * alpha
-    val A2: CSCMatrix[Double] = W * diag(SparseVector.fill(template.pointSet.numberOfPoints)(1.0))
+    val A2: CSCMatrix[Double] = W * CSCHelper.eye(template.pointSet.numberOfPoints)
     val A3: CSCMatrix[Double] = CSCMatrix.zeros[Double](lmPointsOnTemplate.length, M.cols)
-    lmPointsOnTemplate.indices.foreach(i => A3(i,i) = 1.0)
+    lmPointsOnTemplate.indices.foreach(i => A3(i, i) = 1.0)
 
     val B2: CSCMatrix[Double] = W * (U - V)
-    val B3: CSCMatrix[Double] = (UL-VL)*beta
+    val B3: CSCMatrix[Double] = (UL - VL) * beta
 
     val A = CSCHelper.vertcat(A1, A2, A3)
     val B = CSCHelper.vertcat(B1, B2, B3)
@@ -151,7 +151,8 @@ class NonRigidOptimalStepICP_A(templateMesh: TriangleMesh[_3D],
                               ) extends NonRigidOptimalStepICP(templateMesh, targetMesh, templateLandmarks, targetLandmarks, gamma) {
 
   private val G = diag(SparseVector(1, 1, 1, gamma))
-  private val kronMG: CSCMatrix[Double] = CSCHelper.kroneckerProduct(M, G) // TODO: Need optimized version of kron
+  private val kronMG: CSCMatrix[Double] = CSCHelper.kroneckerProduct(M, G)
+
   val B1: CSCMatrix[Double] = CSCMatrix.zeros[Double](4 * numOfEdges, dim)
 
   private def ComputeMatrixD(points: Seq[Point[_3D]]): CSCMatrix[Double] = {

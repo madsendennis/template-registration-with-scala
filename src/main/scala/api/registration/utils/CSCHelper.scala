@@ -24,13 +24,21 @@ object CSCHelper {
     val res = CSCMatrix.zeros[Double](numRows, numCols)
     var offset = 0
     for (m <- matrices) {
-      res((offset) until (offset + m.rows), 0 until numCols) := m
+      var i = 0
+      while (i < m.cols) {
+        var j = m.colPtrs(i)
+        while (j < m.colPtrs(i + 1)) {
+          res(offset+m.rowIndices(j), i) = m.data(j)
+          j += 1
+        }
+        i += 1
+      }
       offset += m.rows
     }
     res
   }
 
-  // Update with: https://stackoverflow.com/questions/44461658/efficient-kronecker-product-with-identity-matrix-and-regular-matrix-numpy-pyt
+
   def kroneckerProduct(matrix1: CSCMatrix[Double], matrix2: CSCMatrix[Double]): CSCMatrix[Double] = {
     val r1 = matrix1.rows
     val c1 = matrix1.cols
@@ -39,14 +47,24 @@ object CSCHelper {
 
     val res = CSCMatrix.zeros[Double](r1 * r2, c1 * c2)
 
-    for (
-      i <- 0 until r1;
-      j <- 0 until c1;
-      k <- 0 until r2;
-      l <- 0 until c2
-    ) {
-      res(r2 * i + k, c2 * j + l) = matrix1(i, j) * matrix2(k, l)
+    var i = 0
+    while (i < c1) {
+      var j = matrix1.colPtrs(i)
+      while (j < matrix1.colPtrs(i + 1)) {
+        var k = 0
+        while (k < c2) {
+          var l = matrix2.colPtrs(k)
+          while (l < matrix2.colPtrs(k + 1)) {
+            res(r2* matrix1.rowIndices(j)+matrix2.rowIndices(l), c2*i+k) = matrix1.data(j) * matrix2.data(l)
+            l += 1
+          }
+          k += 1
+        }
+        j += 1
+      }
+      i += 1
     }
+
     res
   }
 }
