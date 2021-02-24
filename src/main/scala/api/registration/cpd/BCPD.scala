@@ -39,7 +39,7 @@ class BCPD[D: NDSpace](
   val Ginv: DenseMatrix[Double] = pinv(G)
   val GinvLambda = lambda * Ginv
   val X: DenseVector[Double] = dataConverter.toVector(targetPoints)
-
+  val Yinit = dataConverter.toVector(templatePoints)
   /**
     * Initialize G matrix - formula in paper fig. 4
     *
@@ -132,7 +132,7 @@ class BCPD[D: NDSpace](
   def Iteration(yp: Seq[Point[D]], pars: simPars): (Seq[Point[D]], simPars) = {
     // Initialize
     // TODO: To use yhat or y?
-    val Y = dataConverter.toVector(yp) // vectorize current template points
+    val Y = Yinit //dataConverter.toVector(yp) // vectorize current template points
 
     // Update P and related terms
     val Phi = DenseMatrix.zeros[Double](M, N)
