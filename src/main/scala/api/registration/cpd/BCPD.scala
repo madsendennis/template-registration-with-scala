@@ -39,7 +39,7 @@ class BCPD[D: NDSpace](
   val Ginv: DenseMatrix[Double] = pinv(G)
   val GinvLambda = lambda * Ginv
   val X: DenseVector[Double] = dataConverter.toVector(targetPoints)
-  val Yinit = dataConverter.toVector(templatePoints)
+  val Y = dataConverter.toVector(templatePoints)
   /**
     * Initialize G matrix - formula in paper fig. 4
     *
@@ -125,19 +125,15 @@ class BCPD[D: NDSpace](
   /**
     * One iteration of BCPD
     *
-    * @param yp   // template points (M)
+    * @param YhatPoints   // template points (M)
     * @param pars // Similarity transformation parameters
     * @return
     */
-  def Iteration(yp: Seq[Point[D]], pars: simPars): (Seq[Point[D]], simPars) = {
-    // Initialize
-    // TODO: To use yhat or y?
-    val Y = Yinit //dataConverter.toVector(yp) // vectorize current template points
-
+  def Iteration(YhatPoints: Seq[Point[D]], pars: simPars): (Seq[Point[D]], simPars) = {
     // Update P and related terms
     val Phi = DenseMatrix.zeros[Double](M, N)
     (0 until M).map { m =>
-      val mvnd = MultivariateNormalDistribution(vectorizer.vectorize(yp(m)), DenseMatrix.eye[Double](dim) * pars.sigma2)
+      val mvnd = MultivariateNormalDistribution(vectorizer.vectorize(YhatPoints(m)), DenseMatrix.eye[Double](dim) * pars.sigma2)
       val e = math.exp(-pars.s / (2 * pars.sigma2) * trace(pars.sigma(m, m) * DenseMatrix.eye[Double](dim)))
       (0 until N).map { n =>
         Phi(m, n) = mvnd.pdf(vectorizer.vectorize(targetPoints(n))) * e * pars.alpha(m)
@@ -167,7 +163,7 @@ class BCPD[D: NDSpace](
     // Update Local deformations
     val s2divsigma2 = (math.pow(pars.s, 2) / pars.sigma2)
     val SigmaInv = GinvLambda + diag(v) * s2divsigma2
-    val Sigma = inv(SigmaInv)
+    val Sigma = pinv(SigmaInv)
     val SigmaKron = kron(Sigma, Dmat)
     val vhat = s2divsigma2 * SigmaKron * diag(vkron) * (xhatTinv - Y)
     val uhat = Y + vhat
@@ -190,26 +186,24 @@ class BCPD[D: NDSpace](
       v(m) * (um - uMean) * (um - uMean).t + DenseMatrix.eye[Double](dim) * sigma2bar
     }) / Nhat
 
-    val svd.SVD(phi, _, psi) = svd(Sxu)
+    val svd.SVD(phi, _, psiT) = svd(Sxu)
     val diagphipsi = DenseVector.ones[Double](dim)
-    diagphipsi(dim - 1) = det(phi * psi.t)
+    diagphipsi(dim - 1) = det(phi * psiT)
 
-    val R = phi * diag(diagphipsi) * psi.t
-    val s = trace(R.t * Sxu) / trace(Suu)
+    val R = phi * diag(diagphipsi) * psiT
+    val s = trace(R * Sxu) / trace(Suu)
     val t = xMean - s * R * uMean
 
-    val newPars = simPars(sigma = Sigma, s = s, R = R, t = t, sigma2 = 0.0, alpha = alpha)
-
-    val yvhat = Y + vhat
-    val yhat = vectorTransform(yvhat, pars) // TODO: should pars or newPars be used here?
+    val newYhat = vectorTransform(Y + vhat, pars)
 
     val sXX = X.t * diag(v_kron) * X
-    val sXY = X.t * Pkron.t * yhat //*Pkron.t*yhat
-    val sYY = yhat.t * diag(vkron) * yhat
+    val sXY = X.t * Pkron.t * newYhat
+    val sYY = newYhat.t * diag(vkron) * newYhat
     val sC = pars.sigma2 * sigma2bar
     val newSigma2 = (sXX - 2 * sXY + sYY + sC) / (Nhat * dim) // TODO: Should sC be added to all or included in the parenthesis as currently?
 
-    val yhatPoints = dataConverter.toPointSequence(yhat)
-    (yhatPoints, newPars.copy(sigma2 = newSigma2))
+    val newPars = simPars(sigma = Sigma, s = s, R = R, t = t, sigma2 = newSigma2, alpha = alpha)
+
+    (dataConverter.toPointSequence(newYhat), newPars)
   }
 }
