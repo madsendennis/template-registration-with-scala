@@ -10,13 +10,13 @@ import scalismo.ui.api.ScalismoUI
 object NonRigidCPDRegistration extends App {
   scalismo.initialize()
 
-  val template = MeshIO.readMesh(new File("data/femur_reference.stl")).get
-  val target = MeshIO.readMesh(new File("data/femur_target.stl")).get
+  val template = MeshIO.readMesh(new File("data/femur_reference.stl")).get.operations.decimate(100)
+  val target = MeshIO.readMesh(new File("data/femur_target.stl")).get.operations.decimate(100)
 
   println(s"Template points: ${template.pointSet.numberOfPoints}, triangles: ${template.triangles.length}")
   println(s"Target points: ${target.pointSet.numberOfPoints}, triangles: ${target.triangles.length}")
 
-  val cpd = new NonRigidCPDRegistration(template, lambda = 1, beta = 50, w = 0.0, max_iterations = 30)
+  val cpd = new NonRigidCPDRegistration(template, lambda = 1, beta = 50, w = 0.0, max_iterations = 100)
 
   val t10 = System.currentTimeMillis()
   val fit = cpd.register(target)

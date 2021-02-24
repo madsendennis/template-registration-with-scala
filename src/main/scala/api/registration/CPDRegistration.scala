@@ -7,7 +7,7 @@ import scalismo.geometry.{NDSpace, Point}
 
 import language.higherKinds
 
-class RigidCPDRegistration[D: NDSpace, DDomain[A] <: DiscreteDomain[A]](
+class RigidCPDRegistration[D: NDSpace, DDomain[D] <: DiscreteDomain[D]](
     template: DDomain[D],
     lambda: Double = 2,
     beta: Double = 2,
@@ -25,7 +25,7 @@ class RigidCPDRegistration[D: NDSpace, DDomain[A] <: DiscreteDomain[A]](
   }
 }
 
-class NonRigidCPDRegistration[D: NDSpace, DDomain[A] <: DiscreteDomain[A]](
+class NonRigidCPDRegistration[D: NDSpace, DDomain[D] <: DiscreteDomain[D]](
     template: DDomain[D],
     lambda: Double = 2,
     beta: Double = 2,
@@ -36,7 +36,7 @@ class NonRigidCPDRegistration[D: NDSpace, DDomain[A] <: DiscreteDomain[A]](
   override def registrationMethod(targetPoints: Seq[Point[D]]) = cpd.registerNonRigidly(targetPoints)
 }
 
-class AffineCPDRegistration[D: NDSpace, DDomain[A] <: DiscreteDomain[A]](
+class AffineCPDRegistration[D: NDSpace, DDomain[D] <: DiscreteDomain[D]](
     template: DDomain[D],
     lambda: Double = 2,
     beta: Double = 2,
@@ -46,3 +46,5 @@ class AffineCPDRegistration[D: NDSpace, DDomain[A] <: DiscreteDomain[A]](
 
   override def registrationMethod(targetPoints: Seq[Point[D]]) = cpd.registerAffine(targetPoints)
 }
+
+
