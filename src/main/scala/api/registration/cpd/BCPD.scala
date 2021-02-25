@@ -1,7 +1,7 @@
 package api.registration.cpd
 
 import api.registration.utils.PointSequenceConverter
-import breeze.linalg.{Axis, DenseMatrix, DenseVector, det, diag, inv, kron, pinv, sum, svd, tile, trace}
+import breeze.linalg.{Axis, DenseMatrix, DenseVector, det, diag, kron, pinv, sum, svd, tile, trace}
 import breeze.numerics.{abs, digamma}
 import scalismo.common.Vectorizer
 import scalismo.geometry.{NDSpace, Point}
@@ -10,7 +10,7 @@ import scalismo.statisticalmodel.MultivariateNormalDistribution
 
 
 // Similarity transformation parameters
-case class simPars(sigma: DenseMatrix[Double], s: Double, R: DenseMatrix[Double], t: DenseVector[Double], sigma2: Double, alpha: DenseVector[Double])
+case class similarityTransformationParameters(sigma: DenseMatrix[Double], s: Double, R: DenseMatrix[Double], t: DenseVector[Double], sigma2: Double, alpha: DenseVector[Double])
 
 /*
  Implementation of Bayesian Coherent Point Drift (BCPD)
@@ -19,10 +19,10 @@ case class simPars(sigma: DenseMatrix[Double], s: Double, R: DenseMatrix[Double]
 class BCPD[D: NDSpace](
                         val templatePoints: Seq[Point[D]],
                         val targetPoints: Seq[Point[D]],
-                        val w: Double = 0, // Outlier, [0,1]
-                        val lambda: Double = 2.0, // Noise scaling, R+
-                        val gamma: Double = 1.0, // Initial noise scaling, R+
-                        val k: Double = 1.0,
+                        val w: Double, // Outlier, [0,1]
+                        val lambda: Double, // Noise scaling, R+
+                        val gamma: Double, // Initial noise scaling, R+
+                        val k: Double,
                         val kernel: PDKernel[D] // Positive semi-def kernel
                       )(
                         implicit val vectorizer: Vectorizer[Point[D]],
@@ -37,9 +37,14 @@ class BCPD[D: NDSpace](
   val dim: Int = vectorizer.dim // dimension
   val G: DenseMatrix[Double] = initializeKernelMatrixG(templatePoints, kernel)
   val Ginv: DenseMatrix[Double] = pinv(G)
-  val GinvLambda = lambda * Ginv
+  val GinvLambda: DenseMatrix[Double] = lambda * Ginv
   val X: DenseVector[Double] = dataConverter.toVector(targetPoints)
-  val Y = dataConverter.toVector(templatePoints)
+  val Y: DenseVector[Double] = dataConverter.toVector(templatePoints)
+
+  // Helper unit matrices
+  val D1Vec: DenseMatrix[Double] = DenseVector.ones[Double](dim).toDenseMatrix
+  val Dmat: DenseMatrix[Double] = DenseMatrix.eye[Double](dim)
+
   /**
     * Initialize G matrix - formula in paper fig. 4
     *
@@ -51,7 +56,6 @@ class BCPD[D: NDSpace](
                                        points: Seq[Point[D]],
                                        kernel: PDKernel[D]
                                      ): DenseMatrix[Double] = {
-    val M = points.length
     val G: DenseMatrix[Double] = DenseMatrix.zeros[Double](M, M)
     (0 until M).map { i =>
       (0 until M).map { j =>
@@ -80,10 +84,13 @@ class BCPD[D: NDSpace](
     s / (dim * N * M)
   }
 
+  private def printTransformation(pars: similarityTransformationParameters) = {
+    println(s"Final transformation, s: ${pars.s}, t: ${pars.t}, \n R: ${pars.R}")
+  }
 
-  def Registration(max_iteration: Int, tolerance: Double = 0.001): Seq[Point[D]] = {
+  def Registration(max_iteration: Int, tolerance: Double = 0.000001): Seq[Point[D]] = {
     val sigma2Init = gamma * computeSigma2init(templatePoints, targetPoints)
-    val simParsInit = simPars(
+    val simParsInit = similarityTransformationParameters(
       sigma = DenseMatrix.eye[Double](M),
       s = 1.0,
       R = DenseMatrix.eye[Double](dim),
@@ -101,62 +108,65 @@ class BCPD[D: NDSpace](
       val diff = abs(newPars.sigma2 - currentPars.sigma2)
       if (diff < tolerance) {
         println("Converged")
+        printTransformation(iter._2)
         return TY
       } else {
         iter
       }
     }
+    printTransformation(fit._2)
     fit._1
   }
 
   // TranslationAfterScalingAfterRotation
-  private def vectorTransform(v: DenseVector[Double], pars: simPars): DenseVector[Double] = {
+  private def vectorTransform(v: DenseVector[Double], pars: similarityTransformationParameters): DenseVector[Double] = {
     pars.s * (kron(DenseMatrix.eye[Double](M), pars.R) * v) +
       (kron(DenseVector.ones[Double](M).toDenseMatrix, pars.t.toDenseMatrix).toDenseVector)
   }
 
   // RotationAfterScalingAfterTranslation
-  private def vectorInvTransform(v: DenseVector[Double], pars: simPars): DenseVector[Double] = {
+  private def vectorInvTransform(v: DenseVector[Double], pars: similarityTransformationParameters): DenseVector[Double] = {
     val sinv = 1.0 / pars.s
     (kron(DenseMatrix.eye[Double](M), pinv(pars.R))) *
       (sinv * (v + (kron(DenseVector.ones[Double](M).toDenseMatrix, pars.t.toDenseMatrix * (-1.0)).toDenseVector)))
   }
 
-  /**
-    * One iteration of BCPD
-    *
-    * @param YhatPoints   // template points (M)
-    * @param pars // Similarity transformation parameters
-    * @return
-    */
-  def Iteration(YhatPoints: Seq[Point[D]], pars: simPars): (Seq[Point[D]], simPars) = {
-    // Update P and related terms
+  private def computeP(yPoints: Seq[Point[D]], pars: similarityTransformationParameters): DenseMatrix[Double] = {
     val Phi = DenseMatrix.zeros[Double](M, N)
     (0 until M).map { m =>
-      val mvnd = MultivariateNormalDistribution(vectorizer.vectorize(YhatPoints(m)), DenseMatrix.eye[Double](dim) * pars.sigma2)
+      val mvnd = MultivariateNormalDistribution(vectorizer.vectorize(yPoints(m)), DenseMatrix.eye[Double](dim) * pars.sigma2)
       val e = math.exp(-pars.s / (2 * pars.sigma2) * trace(pars.sigma(m, m) * DenseMatrix.eye[Double](dim)))
       (0 until N).map { n =>
         Phi(m, n) = mvnd.pdf(vectorizer.vectorize(targetPoints(n))) * e * pars.alpha(m)
       }
     }
     val Pinit = Phi.copy * (1 - w)
+    // TODO: Fix outlier distribution (section 4.3.4)
     val c = w * 1.0 / N.toDouble // * pout(x_n) see 4.3.4 (1/V)
     val denRow = DenseMatrix(sum(Pinit, Axis._0).t) * (1 - w) + c
     val den = tile(denRow, M, 1)
 
-    val P = Pinit /:/ den
+    Pinit /:/ den
+  }
 
-    // Helper unit matrices
-    val D1Vec = DenseVector.ones[Double](dim)
-    val Dmat = DenseMatrix.eye[Double](dim)
+  /**
+    * One iteration of BCPD
+    *
+    * @param YhatPoints // template points (M)
+    * @param pars       // Similarity transformation parameters
+    * @return
+    */
+  def Iteration(YhatPoints: Seq[Point[D]], pars: similarityTransformationParameters): (Seq[Point[D]], similarityTransformationParameters) = {
+    // Update P and related terms
+    val P = computeP(YhatPoints, pars)
 
     val v = sum(P, Axis._1) // R^M Estimated number of target points matched with each source point
     val v_ = sum(P, Axis._0).t.copy // R^N Posterior probability that x_n is a non-outlier
     val Nhat = sum(v_)
 
     val Pkron = kron(P, Dmat)
-    val vkron = kron(v.toDenseMatrix, D1Vec.toDenseMatrix).toDenseVector
-    val v_kron = kron(v_.toDenseMatrix, D1Vec.toDenseMatrix).toDenseVector
+    val vkron = kron(v.toDenseMatrix, D1Vec).toDenseVector
+    val v_kron = kron(v_.toDenseMatrix, D1Vec).toDenseVector
     val xhat = pinv(diag(vkron)) * Pkron * X
     val xhatTinv = vectorInvTransform(xhat, pars)
 
@@ -202,7 +212,7 @@ class BCPD[D: NDSpace](
     val sC = pars.sigma2 * sigma2bar
     val newSigma2 = (sXX - 2 * sXY + sYY + sC) / (Nhat * dim) // TODO: Should sC be added to all or included in the parenthesis as currently?
 
-    val newPars = simPars(sigma = Sigma, s = s, R = R, t = t, sigma2 = newSigma2, alpha = alpha)
+    val newPars = similarityTransformationParameters(sigma = Sigma, s = s, R = R, t = t, sigma2 = newSigma2, alpha = alpha)
 
     (dataConverter.toPointSequence(newYhat), newPars)
   }

@@ -3,40 +3,30 @@ package apps.demo
 import java.awt.Color
 import java.io.File
 
-import api.registration.GpmmCpdRegistration
-import scalismo.common.RealSpace
+import api.registration.GpmmBcpdRegistration
 import scalismo.common.interpolation.NearestNeighborInterpolator
-import scalismo.geometry.{EuclideanVector, Point, _3D}
+import scalismo.geometry.{EuclideanVector, EuclideanVector3D, Point3D, _3D}
 import scalismo.io.MeshIO
-import scalismo.kernels.{DiagonalKernel, PDKernel}
+import scalismo.kernels.{DiagonalKernel, GaussianKernel}
 import scalismo.mesh.TriangleMesh
 import scalismo.statisticalmodel.{GaussianProcess, LowRankGaussianProcess, PointDistributionModel}
+import scalismo.transformations.{RigidTransformation, Rotation3D, Scaling, Translation3D, TranslationAfterRotation3D, TranslationAfterScalingAfterRotation}
 import scalismo.ui.api.ScalismoUI
 
-// Uses 2*sigma^2 in comparison to the default Gaussian Kernel in Scalismo
-case class RealGaussianKernel[D](sigma: Double) extends PDKernel[D] {
-  val sigma2 = sigma * sigma
-
-  override def domain = RealSpace[D]
-
-  override def k(x: Point[D], y: Point[D]): Double = {
-    val r = x - y
-    scala.math.exp(-r.norm2 / (2 * sigma2))
-  }
-}
-
-object GPMM_CPD_Registration extends App {
+object GPMM_BCPD_Registration extends App {
   scalismo.initialize()
 
-  val template = MeshIO.readMesh(new File("data/femur_reference.stl")).get
-  val target = MeshIO.readMesh(new File("data/femur_target.stl")).get
+  val globalTrans = TranslationAfterScalingAfterRotation(Translation3D(EuclideanVector3D(20.0, 5.0, 5.0)), Scaling[_3D](1.5), Rotation3D(0.4, 0.0, 0.0, Point3D(0, 0, 0)))
+
+  val template = MeshIO.readMesh(new File("data/femur_reference.stl")).get.operations.decimate(100)
+  val target = MeshIO.readMesh(new File("data/femur_target.stl")).get.operations.decimate(100).transform(globalTrans)
 
   println(s"Template points: ${template.pointSet.numberOfPoints}, triangles: ${template.triangles.length}")
   println(s"Target points: ${target.pointSet.numberOfPoints}, triangles: ${target.triangles.length}")
 
   val gpmm: PointDistributionModel[_3D, TriangleMesh] = {
     val ref = template
-    val k = DiagonalKernel(RealGaussianKernel[_3D](50), 3)
+    val k = DiagonalKernel(GaussianKernel[_3D](50), 3)
     val gp = GaussianProcess[_3D, EuclideanVector[_3D]](k)
     val lowRankGP = LowRankGaussianProcess.approximateGPCholesky(ref, gp, relativeTolerance = 0.01, interpolator = NearestNeighborInterpolator())
     val model = PointDistributionModel[_3D, TriangleMesh](ref, lowRankGP).truncate(math.min(lowRankGP.rank, template.pointSet.numberOfPoints * 2))
@@ -45,17 +35,27 @@ object GPMM_CPD_Registration extends App {
 
   println(s"Model rank: ${gpmm.rank} with ${template.pointSet.numberOfPoints} points")
 
-  val cpd = new GpmmCpdRegistration[_3D, TriangleMesh](gpmm, lambda = 1, w = 0.0, max_iterations = 30)
+  val cpd = new GpmmBcpdRegistration[_3D, TriangleMesh](gpmm,
+    target,
+    w = 0.0,
+    lambda = 1,
+    gamma = 1.0,
+    k = 1000,
+    max_iterations = 50
+  )
 
   val t10 = System.currentTimeMillis()
-  val fitPars = cpd.register(target, tolerance = 0.0000001)
+  val (fitPars, fitTrans) = cpd.register(tolerance = 0.000001)
   val t11 = System.currentTimeMillis()
   println(s"Fitting time: ${(t11 - t10) / 1000.0} sec.")
 
-  val fit = gpmm.instance(fitPars)
+  val myTrans = TranslationAfterScalingAfterRotation(fitTrans.t, fitTrans.s, fitTrans.R)
+  val fit = gpmm.instance(fitPars).transform(myTrans)
   println(s"Fit points: ${fit.pointSet.numberOfPoints}, triangles: ${fit.triangles.length}")
 
-  val ui = ScalismoUI()
+  println(s"Final transformation, s: ${fitTrans.s.s}, t: ${fitTrans.t.t.toBreezeVector}, \n R: ${fitTrans.R.rotationMatrix}")
+
+  val ui = ScalismoUI("BCPD as GPMM-regression")
   val dataGroup = ui.createGroup("data")
   ui.show(dataGroup, template, "template").color = Color.RED
   ui.show(dataGroup, target, "target").color = Color.GREEN
