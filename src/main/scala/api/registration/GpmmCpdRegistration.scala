@@ -1,7 +1,7 @@
 package api.registration
 
 import api.registration.cpd.{BCPDwithGPMM, NonRigidCPDwithGPMM}
-import api.registration.utils.{PointSequenceConverter, SimilarityTransformParameters, TransformationHelper}
+import api.registration.utils.{GlobalTranformationType, PointSequenceConverter, SimilarityTransformParameters, SimilarityTransforms, TransformationHelper}
 import breeze.linalg.DenseVector
 import scalismo.common.{DiscreteDomain, DiscreteField, DomainWarp, Vectorizer}
 import scalismo.geometry.{EuclideanVector, NDSpace, Point}
@@ -50,8 +50,8 @@ class GpmmBcpdRegistration[D: NDSpace, DDomain[A] <: DiscreteDomain[A]](
     R = simTrans.zeroRotationInitialization
   )
 
-  def registrationMethod(tolerance: Double, initialGPMM: DenseVector[Double], initialTrans: SimilarityTransformParameters[D]): (DenseVector[Double], SimilarityTransformParameters[D]) = {
-    bcpd.Registration(tolerance, initialGPMMpars = initialGPMM, initialTransformation = initialTrans)
+  def registrationMethod(tolerance: Double, transformationType: GlobalTranformationType, initialGPMM: DenseVector[Double], initialTrans: SimilarityTransformParameters[D]): (DenseVector[Double], SimilarityTransformParameters[D]) = {
+    bcpd.Registration(tolerance, transformationType: GlobalTranformationType, initialGPMMpars = initialGPMM, initialTransformation = initialTrans)
   }
 
   //  def registerAndWarp(tolerance: Double = 0.001, initialPars: DenseVector[Double] = defaultInitialGPMMPars, initialTranform: SimilarityTransformation[D] = defaultInitialTranform): DDomain[D] = {
@@ -62,7 +62,7 @@ class GpmmBcpdRegistration[D: NDSpace, DDomain[A] <: DiscreteDomain[A]](
   //    warper.transformWithField(template, warpField)
   //  }
 
-  def register(tolerance: Double = 0.001, initialGPMM: DenseVector[Double] = defaultInitialGPMMPars, initialTrans: SimilarityTransformParameters[D] = defaultTransformationPars): (DenseVector[Double], SimilarityTransformParameters[D]) = {
-    registrationMethod(tolerance, initialGPMM, initialTrans)
+  def register(tolerance: Double = 0.001, transformationType: GlobalTranformationType = SimilarityTransforms, initialGPMM: DenseVector[Double] = defaultInitialGPMMPars, initialTrans: SimilarityTransformParameters[D] = defaultTransformationPars): (DenseVector[Double], SimilarityTransformParameters[D]) = {
+    registrationMethod(tolerance, transformationType, initialGPMM, initialTrans)
   }
 }

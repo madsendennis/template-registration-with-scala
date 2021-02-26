@@ -5,6 +5,11 @@ import scalismo.geometry.{Point, SquareMatrix, _2D, _3D}
 import scalismo.registration.LandmarkRegistration
 import scalismo.transformations._
 
+trait GlobalTranformationType
+case object SimilarityTransforms extends GlobalTranformationType
+case object RigidTransforms extends GlobalTranformationType
+case object NoTransforms extends GlobalTranformationType
+
 case class SimilarityTransformParameters[D](s: Scaling[D], t: Translation[D], R: Rotation[D]){
   val simTransform: TranslationAfterScalingAfterRotation[D] = TranslationAfterScalingAfterRotation(t, s, R)
   val invSimTransform: RotationAfterScalingAfterTranslation[D] = simTransform.inverse

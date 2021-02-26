@@ -4,6 +4,7 @@ import java.awt.Color
 import java.io.File
 
 import api.registration.GpmmBcpdRegistration
+import api.registration.utils.{NoTransforms, SimilarityTransforms}
 import scalismo.common.interpolation.NearestNeighborInterpolator
 import scalismo.geometry.{EuclideanVector, EuclideanVector3D, Point3D, _3D}
 import scalismo.io.MeshIO
@@ -16,10 +17,10 @@ import scalismo.ui.api.ScalismoUI
 object GPMM_BCPD_Registration extends App {
   scalismo.initialize()
 
-  val globalTrans = TranslationAfterScalingAfterRotation(Translation3D(EuclideanVector3D(20.0, 5.0, 5.0)), Scaling[_3D](1.5), Rotation3D(0.4, 0.0, 0.0, Point3D(0, 0, 0)))
+  val globalTrans = TranslationAfterScalingAfterRotation(Translation3D(EuclideanVector3D(20.0, 5.0, 5.0)), Scaling[_3D](1.0), Rotation3D(0.4, 0.0, 0.0, Point3D(0, 0, 0)))
 
-  val template = MeshIO.readMesh(new File("data/femur_reference.stl")).get.operations.decimate(100)
-  val target = MeshIO.readMesh(new File("data/femur_target.stl")).get.operations.decimate(100).transform(globalTrans)
+  val template = MeshIO.readMesh(new File("data/femur_reference.stl")).get.operations.decimate(500)
+  val target = MeshIO.readMesh(new File("data/femur_target.stl")).get.operations.decimate(500).transform(globalTrans)
 
   println(s"Template points: ${template.pointSet.numberOfPoints}, triangles: ${template.triangles.length}")
   println(s"Target points: ${target.pointSet.numberOfPoints}, triangles: ${target.triangles.length}")
@@ -45,7 +46,7 @@ object GPMM_BCPD_Registration extends App {
   )
 
   val t10 = System.currentTimeMillis()
-  val (fitPars, fitTrans) = cpd.register(tolerance = 0.000001)
+  val (fitPars, fitTrans) = cpd.register(tolerance = 0.000001, transformationType = SimilarityTransforms)
   val t11 = System.currentTimeMillis()
   println(s"Fitting time: ${(t11 - t10) / 1000.0} sec.")
 
