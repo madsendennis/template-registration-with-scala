@@ -12,7 +12,9 @@ case object NoTransforms extends GlobalTranformationType
 
 case class SimilarityTransformParameters[D](s: Scaling[D], t: Translation[D], R: Rotation[D]){
   val simTransform: TranslationAfterScalingAfterRotation[D] = TranslationAfterScalingAfterRotation(t, s, R)
+  val rigidTransform: TranslationAfterRotation[D] = TranslationAfterRotation(t, R)
   val invSimTransform: RotationAfterScalingAfterTranslation[D] = simTransform.inverse
+  val invRigidTransform: RotationAfterTranslation[D] = rigidTransform.inverse
 
   def transform(points: Seq[Point[D]]): Seq[Point[D]] = points.map(simTransform)
   def invTransform(points: Seq[Point[D]]): Seq[Point[D]] = points.map(invSimTransform)
