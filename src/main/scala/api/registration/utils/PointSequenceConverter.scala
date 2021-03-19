@@ -1,7 +1,6 @@
 package api.registration.utils
-
-import breeze.linalg.{DenseMatrix, DenseVector}
-import scalismo.common.Vectorizer
+import breeze.linalg.{CSCMatrix, DenseMatrix, DenseVector}
+import scalismo.common.{PointId, Vectorizer}
 import scalismo.geometry.Point.{Point1DVectorizer, Point2DVectorizer, Point3DVectorizer}
 import scalismo.geometry._
 
@@ -25,6 +24,20 @@ trait PointSequenceConverter[D] {
       p =>
         vectorizer.vectorize(p).toArray
     }.toArray)
+  }
+
+  def toLMMatrix(points: Seq[Point[D]], pointIds: Seq[PointId], n: Int)(implicit vectorizer: Vectorizer[Point[D]]): CSCMatrix[Double] = {
+    val nPoints = points.size
+    val dim: Int = vectorizer.dim
+    val csc = CSCMatrix.zeros[Double](nPoints, dim)
+    points.zip(pointIds).zipWithIndex.foreach {
+      case ((p, pid), i) =>
+        val v = vectorizer.vectorize(p)
+        for (j <- 0 until dim) {
+          csc(i, j) = v(j)
+        }
+    }
+    csc
   }
 }
 
