@@ -35,18 +35,14 @@ abstract class NonRigidOptimalStepICP(templateMesh: TriangleMesh[_3D],
 
   val M: CSCMatrix[Double] = InitializeMatrixM(edges)
 
-  private val defaultAlpha
-    : Seq[Double] = Seq(1, 2, 3, 5, 10, 20, 30, 50, 100) //(1 to 10).scanLeft(1)((a, _) => (a * 2)).map(_.toDouble / 2).reverse.map(_ => 1e1) // ...,8,4,2,1,0.5
-  private val defaultBeta: Seq[Double] = Seq(10, 5, 3, 2, 1, 1, 0, 0, 0) //defaultAlpha.indices.map(i => 1e1)
+  private val defaultAlpha: Seq[Double] = (1 to 10).scanLeft(1)((a, _) => (a * 2)).map(_.toDouble / 2).reverse.map(_ => 1e1) // ...,8,4,2,1,0.5
+  private val defaultBeta: Seq[Double] = defaultAlpha
 
   private def trianglesToEdges(triangles: IndexedSeq[TriangleCell]): IndexedSeq[(PointId, PointId)] = {
-    triangles
-      .flatMap { triangle =>
+    triangles.flatMap { triangle =>
         val t = triangle.pointIds.sortBy(_.id)
         Seq((t(0), t(1)), (t(0), t(2)), (t(1), t(2)))
-      }
-      .toSet
-      .toIndexedSeq
+      }.toSet.toIndexedSeq
   }
 
   private def InitializeMatrixM(edges: IndexedSeq[(PointId, PointId)]): CSCMatrix[Double] = {
@@ -64,8 +60,7 @@ abstract class NonRigidOptimalStepICP(templateMesh: TriangleMesh[_3D],
   def Registration(max_iteration: Int,
                    tolerance: Double = 0.001,
                    alpha: Seq[Double] = defaultAlpha,
-                   beta: Seq[Double] = defaultBeta,
-                   callback: (TriangleMesh[_3D], Double, IndexedSeq[Point[_3D]]) => Unit = (_: TriangleMesh[_3D], _: Double, _: IndexedSeq[Point[_3D]]) => {})
+                   beta: Seq[Double] = defaultBeta)
     : TriangleMesh[_3D] = {
     require(alpha.length == beta.length)
 
@@ -77,7 +72,6 @@ abstract class NonRigidOptimalStepICP(templateMesh: TriangleMesh[_3D],
         val iter = Iteration(it._1, targetMesh, a, b)
         val TY = iter._1
         val newDist = iter._2
-        callback(TY, newDist, iter._3)
         println(s"ICP, iteration: ${j * max_iteration + i}/${max_iteration * alpha.length}, alpha: ${a}, beta: ${b}, average distance to target: ${newDist}")
         if (newDist < tolerance) {
           println("Converged")
@@ -130,7 +124,6 @@ class NonRigidOptimalStepICP_T(templateMesh: TriangleMesh[_3D],
     val VL = CSCHelper.DenseMatrix2CSCMatrix(dataConverter.toMatrix(lmPointsOnTemplate))
 
     val U = CSCHelper.DenseMatrix2CSCMatrix(dataConverter.toMatrix(cp))
-    val WL = CSCHelper.eye(lmPointsOnTemplate.length)
     // N-ICP-T
     val V = CSCHelper.DenseMatrix2CSCMatrix(dataConverter.toMatrix(template.pointSet.points.toSeq))
     val A1: CSCMatrix[Double] = M * alpha
@@ -183,14 +176,14 @@ class NonRigidOptimalStepICP_A(templateMesh: TriangleMesh[_3D],
     D
   }
 
-  private def ComputeMatrixDL(points: Seq[Point[_3D]], ids: Seq[PointId], n: Int): CSCMatrix[Double] = {
-    val nPoints = points.size
-    val D: CSCMatrix[Double] = CSCMatrix.zeros[Double](nPoints, 4 * n) // Reference points each entry in D is a matrix (4D)
-    for (((pt, PointId(pid)), i) <- points.zip(ids).zipWithIndex) {
-      val ptValues = pt.toArray :+ 1.0
-      (0 until dim + 1).foreach { j =>
-        val index = pid * 4 + j
-        D(i, index) = ptValues(j)
+  private def ComputeMatrixDL(template: TriangleMesh[_3D]): CSCMatrix[Double] = {
+    val nPoints = lmIdsOnTemplate.length
+    val D: CSCMatrix[Double] = CSCMatrix.zeros[Double](nPoints, 4 * n)
+    lmIdsOnTemplate.zipWithIndex.foreach{case(id, i) =>
+      val p = template.pointSet.point(id).toArray :+ 1.0
+      (0 until dim+1).foreach {j =>
+        val index = id.id*4+j
+        D(i, index) = p(j)
       }
     }
     D
@@ -203,13 +196,6 @@ class NonRigidOptimalStepICP_A(templateMesh: TriangleMesh[_3D],
     require(alpha >= 0.0)
     require(beta >= 0.0)
 
-    def printDim[T](m: DenseMatrix[T], s: String) = {
-      println(f"$s ${m.rows}x${m.cols}")
-    }
-    def printDimensions[T](m: CSCMatrix[T], s: String) = {
-      println(f"$s ${m.rows}x${m.cols}")
-    }
-
     val (cp, w, dist) = getClosestPoints(template, target)
 
     val W = diag(SparseVector(w: _*))
@@ -219,8 +205,7 @@ class NonRigidOptimalStepICP_A(templateMesh: TriangleMesh[_3D],
 
     val D = ComputeMatrixD(template.pointSet.points.toSeq)
 
-    val lmPointsOnTemplate = lmIdsOnTemplate.map(id => templateMesh.pointSet.point(id))
-    val DL = ComputeMatrixDL(lmPointsOnTemplate, lmIdsOnTemplate, template.pointSet.numberOfPoints)
+    val DL = ComputeMatrixDL(template)
 
     val U = CSCHelper.DenseMatrix2CSCMatrix(dataConverter.toMatrix(cp))
 
@@ -229,7 +214,7 @@ class NonRigidOptimalStepICP_A(templateMesh: TriangleMesh[_3D],
     val A3: CSCMatrix[Double] = DL * beta
 
     val B2: CSCMatrix[Double] = W * U
-    val B3: CSCMatrix[Double] = UL * beta // TODO: Should beta also be multiplied to B3 ???
+    val B3: CSCMatrix[Double] = UL * beta
 
     val A = CSCHelper.vertcat(A1, A2, A3)
     val B = CSCHelper.vertcat(B1, B2, B3)
