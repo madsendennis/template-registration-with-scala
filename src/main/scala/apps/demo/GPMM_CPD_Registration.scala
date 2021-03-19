@@ -3,7 +3,7 @@ package apps.demo
 import java.awt.Color
 import java.io.File
 
-import api.registration.GPMMRegistration
+import api.registration.GpmmCpdRegistration
 import scalismo.common.RealSpace
 import scalismo.common.interpolation.NearestNeighborInterpolator
 import scalismo.geometry.{EuclideanVector, Point, _3D}
@@ -45,7 +45,7 @@ object GPMM_CPD_Registration extends App {
 
   println(s"Model rank: ${gpmm.rank} with ${template.pointSet.numberOfPoints} points")
 
-  val cpd = new GPMMRegistration[_3D, TriangleMesh](gpmm, lambda = 1, w = 0.0, max_iterations = 30)
+  val cpd = new GpmmCpdRegistration[_3D, TriangleMesh](gpmm, lambda = 1, w = 0.0, max_iterations = 30)
 
   val t10 = System.currentTimeMillis()
   val fitPars = cpd.register(target, tolerance = 0.0000001)

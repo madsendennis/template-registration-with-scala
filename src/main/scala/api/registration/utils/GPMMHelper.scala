@@ -36,12 +36,11 @@ object GPMMHelper {
     val scale3 = sigma3/2
 
     println(s"Maximum distance: ${maxDist}, minimum distance: ${minDist}")
-    val zeroMean = Field(EuclideanSpace[_3D], (_: Point[_3D]) => EuclideanVector.zeros[_3D])
     val k = DiagonalKernel(GaussianKernel[_3D](sigma1) * scale1, 3) +
       DiagonalKernel(GaussianKernel[_3D](sigma2) * scale2, 3) +
       DiagonalKernel(GaussianKernel[_3D](sigma3) * scale3, 3)
 
-    val gp = GaussianProcess[_3D, EuclideanVector[_3D]](zeroMean, k)
+    val gp = GaussianProcess[_3D, EuclideanVector[_3D]](k)
 
     val lowRankGP = LowRankGaussianProcess.approximateGPCholesky(template, gp, relativeTolerance = relativeTolerance, interpolator = TriangleMeshInterpolator3D[EuclideanVector[_3D]]())
     println(s"GPMM rank: ${lowRankGP.rank}")
