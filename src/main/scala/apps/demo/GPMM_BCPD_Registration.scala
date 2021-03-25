@@ -3,8 +3,8 @@ package apps.demo
 import java.awt.Color
 import java.io.File
 
-import api.registration.{GpmmBcpdRegistration, GpmmSpecialICPRegistration}
-import api.registration.utils.{GPMMHelper, RigidTransforms, modelViewer}
+import api.registration.{GpmmBcpdRegistration}
+import api.registration.utils.{GPMMTriangleMesh3D, RigidTransforms, modelViewer}
 import scalismo.geometry.{EuclideanVector3D, Point3D, _3D}
 import scalismo.io.MeshIO
 import scalismo.mesh.TriangleMesh
@@ -22,7 +22,7 @@ object GPMM_BCPD_Registration extends App {
   println(s"Template points: ${template.pointSet.numberOfPoints}, triangles: ${template.triangles.length}")
   println(s"Target points: ${target.pointSet.numberOfPoints}, triangles: ${target.triangles.length}")
 
-  val gpmm = GPMMHelper.automaticGPMMfromTemplate(template, relativeTolerance = 0.01)
+  val gpmm = GPMMTriangleMesh3D(template, relativeTolerance = 0.01).AutomaticGaussian()
 
   println(s"Model rank: ${gpmm.rank} with ${template.pointSet.numberOfPoints} points")
 
@@ -54,7 +54,7 @@ object GPMM_BCPD_Registration extends App {
 //  )
 
   val t10 = System.currentTimeMillis()
-  val (fitPars, fitTrans) = registration.register(tolerance = 0.000001, transformationType = RigidTransforms)
+  val (fitPars, fitTrans, sigma2) = registration.register(tolerance = 0.000001, transformationType = RigidTransforms)
   val t11 = System.currentTimeMillis()
   println(s"Fitting time: ${(t11 - t10) / 1000.0} sec.")
 

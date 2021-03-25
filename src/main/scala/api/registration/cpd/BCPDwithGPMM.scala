@@ -43,7 +43,7 @@ abstract class GPMMfitting[D: NDSpace, DDomain[D] <: DiscreteDomain[D]](
   val Xmat: DenseMatrix[Double] = dataConverter.toMatrix(targetPoints)
   val Yvec: DenseVector[Double] = dataConverter.toVector(referencePoints)
 
-  def Registration(tolerance: Double, transformationType: GlobalTranformationType, initialGPMMpars: DenseVector[Double], initialTransformation: SimilarityTransformParameters[D]): (DenseVector[Double], SimilarityTransformParameters[D]) = {
+  def Registration(tolerance: Double, transformationType: GlobalTranformationType, initialGPMMpars: DenseVector[Double], initialTransformation: SimilarityTransformParameters[D]): (DenseVector[Double], SimilarityTransformParameters[D], Double) = {
     val instance = gpmm.instance(initialGPMMpars) //TODO: Add similarityTransform
     val sigma2Init = gamma * computeSigma2init(instance.pointSet.points.toSeq, targetPoints)
 
@@ -69,12 +69,12 @@ abstract class GPMMfitting[D: NDSpace, DDomain[D] <: DiscreteDomain[D]](
       val sigmaDiff = math.abs(iter._2.sigma2 - sigma2)
       if (sigmaDiff < tolerance) {
         println(s"Converged")
-        return (iter._1, iter._2.simTrans)
+        return (iter._1, iter._2.simTrans, iter._2.sigma2)
       } else {
         iter
       }
     }
-    (fit._1, fit._2.simTrans)
+    (fit._1, fit._2.simTrans, fit._2.sigma2)
   }
 
   private def computeSigma2init(reference: Seq[Point[D]], target: Seq[Point[D]]): Double = {

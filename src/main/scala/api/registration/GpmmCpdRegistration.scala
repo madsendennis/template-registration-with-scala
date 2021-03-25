@@ -4,7 +4,7 @@ import api.registration.cpd.{BCPDwithGPMM, NonRigidCPDwithGPMM, SpecialICPwithGP
 import api.registration.utils._
 import breeze.linalg.DenseVector
 import scalismo.common.{DiscreteDomain, DiscreteField, DomainWarp, Vectorizer}
-import scalismo.geometry.{EuclideanVector, NDSpace, Point, _3D}
+import scalismo.geometry.{EuclideanVector, Landmark, NDSpace, Point, _3D}
 import scalismo.mesh.TriangleMesh
 import scalismo.statisticalmodel.PointDistributionModel
 import scalismo.transformations.{Scaling, Translation}
@@ -13,23 +13,29 @@ import scala.language.higherKinds
 
 class GpmmCpdRegistration[D: NDSpace, DDomain[A] <: DiscreteDomain[A]](
                                                                         gpmm: PointDistributionModel[D, DDomain],
+                                                                        targetMesh: DDomain[D],
+                                                                        gpmmLMs: Seq[Landmark[D]],
+                                                                        targetLMs: Seq[Landmark[D]],
                                                                         lambda: Double = 2,
                                                                         w: Double = 0,
-                                                                        max_iterations: Int = 100)(implicit warper: DomainWarp[D, DDomain], vectorizer: Vectorizer[Point[D]], pointSequenceConverter: PointSequenceConverter[D]) {
-  val cpd = new NonRigidCPDwithGPMM(gpmm, lambda, w, max_iterations)
+                                                                        max_iterations: Int = 100,
+                                                                        modelView: Option[modelViewer] = None
+                                                                      )(implicit warper: DomainWarp[D, DDomain], vectorizer: Vectorizer[Point[D]], pointSequenceConverter: PointSequenceConverter[D]) {
+  val cpd = new NonRigidCPDwithGPMM(gpmm, targetMesh, gpmmLMs, targetLMs, lambda, w, max_iterations, modelView)
+  val zeroGPMMpars: DenseVector[Double] = DenseVector.zeros[Double](gpmm.rank)
 
-  def registrationMethod(target: DDomain[D], tolerance: Double): DenseVector[Double] = cpd.Registration(target.pointSet.points.toSeq, tolerance)
+  def registrationMethod(tolerance: Double, initialGPMM: DenseVector[Double], initialSigma2: Double): DenseVector[Double] = cpd.Registration(tolerance, initialGPMM, initialSigma2)
 
-  def registerAndWarp(target: DDomain[D], tolerance: Double = 0.001): DDomain[D] = {
+  def registerAndWarp(tolerance: Double = 0.001, initialGPMM: DenseVector[Double] = zeroGPMMpars, initialSigma2: Double = Double.PositiveInfinity): DDomain[D] = {
     val template = gpmm.reference
-    val registrationPars = registrationMethod(target, tolerance)
+    val registrationPars = registrationMethod(tolerance, initialGPMM, initialSigma2)
     val registration = gpmm.instance(registrationPars)
     val warpField = DiscreteField(template, template.pointSet.points.toIndexedSeq.zip(registration.pointSet.points.toIndexedSeq).map { case (a, b) => b - a })
     warper.transformWithField(template, warpField)
   }
 
-  def register(target: DDomain[D], tolerance: Double = 0.001): DenseVector[Double] = {
-    registrationMethod(target, tolerance)
+  def register(tolerance: Double = 0.001, initialGPMM: DenseVector[Double] = zeroGPMMpars, initialSigma2: Double = Double.PositiveInfinity): DenseVector[Double] = {
+    registrationMethod(tolerance, initialGPMM, initialSigma2)
   }
 }
 
@@ -52,7 +58,7 @@ class GpmmBcpdRegistration[D: NDSpace, DDomain[A] <: DiscreteDomain[A]](
     R = simTrans.zeroRotationInitialization
   )
 
-  def registrationMethod(tolerance: Double, transformationType: GlobalTranformationType, initialGPMM: DenseVector[Double], initialTrans: SimilarityTransformParameters[D]): (DenseVector[Double], SimilarityTransformParameters[D]) = {
+  def registrationMethod(tolerance: Double, transformationType: GlobalTranformationType, initialGPMM: DenseVector[Double], initialTrans: SimilarityTransformParameters[D]): (DenseVector[Double], SimilarityTransformParameters[D], Double) = {
     bcpd.Registration(tolerance, transformationType: GlobalTranformationType, initialGPMMpars = initialGPMM, initialTransformation = initialTrans)
   }
 
@@ -64,7 +70,7 @@ class GpmmBcpdRegistration[D: NDSpace, DDomain[A] <: DiscreteDomain[A]](
   //    warper.transformWithField(template, warpField)
   //  }
 
-  def register(tolerance: Double = 0.001, transformationType: GlobalTranformationType = SimilarityTransforms, initialGPMM: DenseVector[Double] = defaultInitialGPMMPars, initialTrans: SimilarityTransformParameters[D] = defaultTransformationPars): (DenseVector[Double], SimilarityTransformParameters[D]) = {
+  def register(tolerance: Double = 0.001, transformationType: GlobalTranformationType = SimilarityTransforms, initialGPMM: DenseVector[Double] = defaultInitialGPMMPars, initialTrans: SimilarityTransformParameters[D] = defaultTransformationPars): (DenseVector[Double], SimilarityTransformParameters[D], Double) = {
     registrationMethod(tolerance, transformationType, initialGPMM, initialTrans)
   }
 }
@@ -88,7 +94,7 @@ class GpmmSpecialICPRegistration(
     R = simTrans.zeroRotationInitialization
   )
 
-  def registrationMethod(tolerance: Double, transformationType: GlobalTranformationType, initialGPMM: DenseVector[Double], initialTrans: SimilarityTransformParameters[_3D]): (DenseVector[Double], SimilarityTransformParameters[_3D]) = {
+  def registrationMethod(tolerance: Double, transformationType: GlobalTranformationType, initialGPMM: DenseVector[Double], initialTrans: SimilarityTransformParameters[_3D]): (DenseVector[Double], SimilarityTransformParameters[_3D], Double) = {
     bcpd.Registration(tolerance, transformationType: GlobalTranformationType, initialGPMMpars = initialGPMM, initialTransformation = initialTrans)
   }
 
@@ -100,7 +106,7 @@ class GpmmSpecialICPRegistration(
   //    warper.transformWithField(template, warpField)
   //  }
 
-  def register(tolerance: Double = 0.001, transformationType: GlobalTranformationType = SimilarityTransforms, initialGPMM: DenseVector[Double] = defaultInitialGPMMPars, initialTrans: SimilarityTransformParameters[_3D] = defaultTransformationPars): (DenseVector[Double], SimilarityTransformParameters[_3D]) = {
+  def register(tolerance: Double = 0.001, transformationType: GlobalTranformationType = SimilarityTransforms, initialGPMM: DenseVector[Double] = defaultInitialGPMMPars, initialTrans: SimilarityTransformParameters[_3D] = defaultTransformationPars): (DenseVector[Double], SimilarityTransformParameters[_3D], Double) = {
     registrationMethod(tolerance, transformationType, initialGPMM, initialTrans)
   }
 }

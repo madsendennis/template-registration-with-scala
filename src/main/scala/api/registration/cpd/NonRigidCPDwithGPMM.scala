@@ -1,17 +1,21 @@
 package api.registration.cpd
 
-import api.registration.utils.PointSequenceConverter
+import api.registration.utils.{ModelViewerHelper, PointSequenceConverter, modelViewer}
 import breeze.linalg.{Axis, DenseMatrix, DenseVector, sum, tile}
 import scalismo.common.interpolation.NearestNeighborInterpolator
-import scalismo.common.{DiscreteDomain, DomainWarp, Vectorizer}
+import scalismo.common.{DiscreteDomain, DomainWarp, PointId, Vectorizer}
 import scalismo.geometry._
 import scalismo.statisticalmodel.{MultivariateNormalDistribution, PointDistributionModel}
 
 class NonRigidCPDwithGPMM[D: NDSpace, DDomain[D] <: DiscreteDomain[D]](
                                                                      val gpmm: PointDistributionModel[D, DDomain],
+                                                                     val targetMesh: DDomain[D],
+                                                                     val gpmmLMs: Seq[Landmark[D]],
+                                                                     val targetLMs: Seq[Landmark[D]],
                                                                      val lambda: Double,
                                                                      val w: Double,
                                                                      val max_iteration: Int,
+                                                                     val modelView: Option[modelViewer]
                                                                    )(
                                                                      implicit val vectorizer: Vectorizer[Point[D]],
                                                                      domainWarper: DomainWarp[D, DDomain],
@@ -20,17 +24,31 @@ class NonRigidCPDwithGPMM[D: NDSpace, DDomain[D] <: DiscreteDomain[D]](
   println("New version using GPMM as G and optimizing loops")
   require(lambda > 0)
   require(0 <= w && w < 1.0)
-  private val initialPars = DenseVector.zeros[Double](gpmm.rank)
 
-  def Registration(target: Seq[Point[D]], tolerance: Double, initialGPMMpars: DenseVector[Double] = initialPars): DenseVector[Double] = {
+
+  private val commonLmNames = gpmmLMs.map(_.id) intersect targetLMs.map(_.id)
+  val lmIdsOnReference: Seq[(PointId, MultivariateNormalDistribution)] = commonLmNames.map(name => gpmmLMs.find(_.id == name).get).map(lm => (gpmm.reference.pointSet.findClosestPoint(lm.point).id, lm.uncertainty.get))
+  val lmPointsOnTarget: Seq[Point[D]] = commonLmNames.map(name => targetLMs.find(_.id == name).get).map(lm => targetMesh.pointSet.findClosestPoint(lm.point).point)
+
+  val lmCP = lmIdsOnReference.zip(lmPointsOnTarget).map{case(id, p) => (id._1, p, id._2)}
+
+
+  def Registration(tolerance: Double, initialGPMMpars: DenseVector[Double], initialSigma2: Double): DenseVector[Double] = {
+    val target = targetMesh.pointSet.points.toSeq
     val instance = gpmm.instance(initialGPMMpars)
-    val sigma2Init = computeInitialSigma2(instance.pointSet.points.toSeq, target)
+
+    val sigma2Init = if(initialSigma2 == Double.PositiveInfinity) computeInitialSigma2(instance.pointSet.points.toSeq, target) else initialSigma2
 
     val fit = (0 until max_iteration).foldLeft((initialGPMMpars, sigma2Init)) { (it, i) =>
       val parsInit = it._1
       val sigma2 = it._2
       println(s"CPD, iteration: ${i}/${max_iteration}, sigma2: ${sigma2}")
       val iter = Iteration(parsInit, target, sigma2)
+      if (modelView.nonEmpty) {
+        if (i % modelView.get.updateFrequency == 0) {
+          modelView.get.modelView.shapeTransformationView.coefficients = iter._1
+        }
+      }
       val pars = iter._1
       val sigmaDiff = sigma2 - iter._2
       if (sigmaDiff < tolerance) {
@@ -43,7 +61,7 @@ class NonRigidCPDwithGPMM[D: NDSpace, DDomain[D] <: DiscreteDomain[D]](
     fit._1
   }
 
-  private def computeInitialSigma2(template: Seq[Point[D]], target: Seq[Point[D]]): Double = {
+  def computeInitialSigma2(template: Seq[Point[D]], target: Seq[Point[D]]): Double = {
     val N = target.length
     val M = template.length
     val sumDist = template.flatMap { pm =>
@@ -113,9 +131,9 @@ class NonRigidCPDwithGPMM[D: NDSpace, DDomain[D] <: DiscreteDomain[D]](
 
     val (closestPoints, pmat: DenseMatrix[Double]) = getCorrespondence(templatePoints, target, sigma2)
 
-    val cp = instance.pointSet.pointIds.toSeq.zip(closestPoints).map(t => (t._1, t._2._1, t._2._2)).toIndexedSeq
+    val cp = instance.pointSet.pointIds.toSeq.zip(closestPoints).map(t => (t._1, t._2._1, t._2._2)).toIndexedSeq ++ lmCP
 
-    val posteriorMean = gpmm.newReference(instance, NearestNeighborInterpolator()).posterior(cp).mean
+    val posteriorMean = gpmm.posterior(cp).mean
     //    val posteriorMean = gpmm.posterior(cp, sigma2 * lambda).mean
 
     val TY = dataConverter.toMatrix(posteriorMean.pointSet.points.toSeq)

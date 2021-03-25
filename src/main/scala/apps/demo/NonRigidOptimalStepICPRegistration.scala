@@ -12,10 +12,10 @@ import scalismo.ui.api.ScalismoUI
 object NonRigidOptimalStepICPRegistration extends App {
   scalismo.initialize()
 
-  val template = MeshIO.readMesh(new File("data/femur_reference.stl")).get.operations.decimate(200)
-  val target = MeshIO.readMesh(new File("data/femur_target.stl")).get
-  val templateLms = LandmarkIO.readLandmarksJson3D(new File("data/femur_reference.json")).get
-  val targetLms = LandmarkIO.readLandmarksJson3D(new File("data/femur_target.json")).get
+  val template = MeshIO.readMesh(new File("data/femur_reference.stl")).get.operations.decimate(10)
+  val target = MeshIO.readMesh(new File("data/femur_target_partial.stl")).get
+//  val templateLms = LandmarkIO.readLandmarksJson3D(new File("data/femur_reference.json")).get
+//  val targetLms = LandmarkIO.readLandmarksJson3D(new File("data/femur_target.json")).get
 
   println(s"Template points: ${template.pointSet.numberOfPoints}, triangles: ${template.triangles.length}")
   println(s"Target points: ${target.pointSet.numberOfPoints}, triangles: ${target.triangles.length}")
@@ -27,8 +27,8 @@ object NonRigidOptimalStepICPRegistration extends App {
 
   val iterGroup = ui.createGroup("iterations")
   // Choose between ICP-A and ICP-T
-  val nicp = new NonRigidOptimalStepICP_T(template, target, templateLms, targetLms)
-//  val nicp = new NonRigidOptimalStepICP_A(template, target, templateLms, targetLms)
+  val nicp = new NonRigidOptimalStepICP_T(template, target, Seq(), Seq())
+//  val nicp = new NonRigidOptimalStepICP_A(template, target, Seq(), Seq())
 
   val t0 = System.currentTimeMillis()
   val fit = nicp.Registration(10, 0.0000001)

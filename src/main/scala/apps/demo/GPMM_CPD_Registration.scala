@@ -4,7 +4,7 @@ import java.awt.Color
 import java.io.File
 
 import api.registration.GpmmCpdRegistration
-import scalismo.common.RealSpace
+import scalismo.common.{EuclideanSpace, RealSpace}
 import scalismo.common.interpolation.NearestNeighborInterpolator
 import scalismo.geometry.{EuclideanVector, Point, _3D}
 import scalismo.io.MeshIO
@@ -17,7 +17,7 @@ import scalismo.ui.api.ScalismoUI
 case class RealGaussianKernel[D](sigma: Double) extends PDKernel[D] {
   val sigma2 = sigma * sigma
 
-  override def domain = RealSpace[D]
+  override def domain = EuclideanSpace[D]
 
   override def k(x: Point[D], y: Point[D]): Double = {
     val r = x - y
@@ -45,10 +45,10 @@ object GPMM_CPD_Registration extends App {
 
   println(s"Model rank: ${gpmm.rank} with ${template.pointSet.numberOfPoints} points")
 
-  val cpd = new GpmmCpdRegistration[_3D, TriangleMesh](gpmm, lambda = 1, w = 0.0, max_iterations = 30)
+  val cpd = new GpmmCpdRegistration[_3D, TriangleMesh](gpmm, target, Seq(), Seq(), lambda = 1, w = 0.0, max_iterations = 30)
 
   val t10 = System.currentTimeMillis()
-  val fitPars = cpd.register(target, tolerance = 0.0000001)
+  val fitPars = cpd.register(tolerance = 0.0000001)
   val t11 = System.currentTimeMillis()
   println(s"Fitting time: ${(t11 - t10) / 1000.0} sec.")
 
