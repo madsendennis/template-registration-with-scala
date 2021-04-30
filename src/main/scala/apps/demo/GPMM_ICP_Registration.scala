@@ -22,9 +22,10 @@ object GPMM_ICP_Registration extends App {
   val nicp = new NonRigidICPwithGPMMTriangle3D(gpmm, target, None) // Without landmarks
 
   val t10 = System.currentTimeMillis()
-  val fit = nicp.Registration(10, 0.0000001)
+  val fitPars = nicp.Registration(10, 0.0000001)
   val t11 = System.currentTimeMillis()
   println(s"Fitting time: ${(t11 - t10) / 1000.0} sec.")
+  val fit = gpmm.instance(fitPars)
 
   println(s"Fit points: ${fit.pointSet.numberOfPoints}, triangles: ${fit.triangles.length}")
 

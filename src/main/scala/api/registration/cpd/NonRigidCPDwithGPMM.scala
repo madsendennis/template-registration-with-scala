@@ -21,7 +21,6 @@ class NonRigidCPDwithGPMM[D: NDSpace, DDomain[D] <: DiscreteDomain[D]](
                                                                      domainWarper: DomainWarp[D, DDomain],
                                                                      dataConverter: PointSequenceConverter[D]
                                                                    ) {
-  println("New version using GPMM as G and optimizing loops")
   require(lambda > 0)
   require(0 <= w && w < 1.0)
 

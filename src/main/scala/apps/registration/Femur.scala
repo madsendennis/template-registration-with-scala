@@ -36,7 +36,7 @@ object Femur extends App{
 //  StatisticalModelIO.writeStatisticalTriangleMeshModel3D(gpmmInvLapDot, new File("data/femur_invLapDot.h5"))
 
 
-    val ui = ScalismoUI("GiNGR")
+    val ui = ScalismoUI()
   val targetGroup = ui.createGroup("target")
     val modelGroup = ui.createGroup("model")
   val showTarget = ui.show(targetGroup, target, "target")
