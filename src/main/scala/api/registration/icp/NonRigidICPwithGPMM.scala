@@ -1,6 +1,6 @@
 package api.registration.icp
 
-import api.registration.utils.NonRigidClosestPointRegistrator._
+import api.registration.utils.ClosestPointRegistrator._
 import api.registration.utils.{ClosestPointDirection, ReferenceToTarget, modelViewer}
 import breeze.linalg.DenseVector
 import breeze.numerics.{abs, pow}
@@ -73,12 +73,12 @@ class NonRigidICPwithGPMMTriangle3D(gpmm: PointDistributionModel[_3D, TriangleMe
   }
 }
 
-class NonRigidICPwithGPMMTriangle3DNormalDirection(gpmm: PointDistributionModel[_3D, TriangleMesh],
-                                                   target: TriangleMesh[_3D], modelView: Option[modelViewer]) extends NonRigidICPwithGPMM[_3D, TriangleMesh](gpmm, target, modelView) {
-  override def getCorrespondence(template: TriangleMesh[_3D], target: TriangleMesh[_3D], direction: ClosestPointDirection): (Seq[(PointId, Point[_3D], Double)], Double) = {
-    ClosestPointAlongNormalTriangleMesh3D.closestPointCorrespondence(template, target, direction)
-  }
-}
+//class NonRigidICPwithGPMMTriangle3DNormalDirection(gpmm: PointDistributionModel[_3D, TriangleMesh],
+//                                                   target: TriangleMesh[_3D], modelView: Option[modelViewer]) extends NonRigidICPwithGPMM[_3D, TriangleMesh](gpmm, target, modelView) {
+//  override def getCorrespondence(template: TriangleMesh[_3D], target: TriangleMesh[_3D], direction: ClosestPointDirection): (Seq[(PointId, Point[_3D], Double)], Double) = {
+//    ClosestPointAlongNormalTriangleMesh3D.closestPointCorrespondence(template, target, direction)
+//  }
+//}
 
 class NonRigidICPwithGPMMUnstructuredPointsDomain3D(gpmm: PointDistributionModel[_3D, UnstructuredPointsDomain],
                                                     target: UnstructuredPointsDomain[_3D], modelView: Option[modelViewer]) extends NonRigidICPwithGPMM[_3D, UnstructuredPointsDomain](gpmm, target, modelView) {

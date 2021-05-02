@@ -1,6 +1,6 @@
 package api.registration.icp
 
-import api.registration.utils.{ClosestPointDirection, NonRigidClosestPointRegistrator, PoseRegistrator, ReferenceToTarget, Registrator}
+import api.registration.utils.{ClosestPointDirection, ClosestPointRegistrator, PoseRegistrator, ReferenceToTarget, Registrator}
 import apps.util.AlignmentTransforms
 import breeze.numerics.abs
 import scalismo.common.{PointId, UnstructuredPoints, Vectorizer}
@@ -39,7 +39,7 @@ class RigidICPtransform(referenceInit: TriangleMesh[_3D],
   }
 
   def Iteration(reference: TriangleMesh[_3D], direction: ClosestPointDirection): (TriangleMesh[_3D], Double) = {
-    val (cpinfo, dist) = NonRigidClosestPointRegistrator.ClosestPointTriangleMesh3D.closestPointCorrespondence(reference, target, direction) //(template, target)
+    val (cpinfo, dist) = ClosestPointRegistrator.ClosestPointTriangleMesh3D.closestPointCorrespondence(reference, target, direction) //(template, target)
     val cp = cpinfo.filter(_._3 == 1.0).map(f => (f._1, f._2)).toIndexedSeq
     val points = cp.map{case(id, p) => (reference.pointSet.point(id), p)}
 //    val registeredPoints = PoseRegistrator.RigidRegistrator3D.register(points)

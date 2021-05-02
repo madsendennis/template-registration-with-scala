@@ -1,4 +1,4 @@
-package apps.femur
+package apps.femurCourse
 
 import java.io.File
 

@@ -1,4 +1,4 @@
-package apps.femur
+package apps.femurCourse
 
 import scalismo.common.interpolation.TriangleMeshInterpolator3D
 import scalismo.geometry.{EuclideanVector, _3D}

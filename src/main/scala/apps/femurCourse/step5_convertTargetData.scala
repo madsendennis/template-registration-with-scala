@@ -1,4 +1,4 @@
-package apps.femur
+package apps.femurCourse
 
 import java.io.File
 
@@ -25,7 +25,7 @@ object step5_convertTargetData extends App {
     val baseSplit = baseName.split('.')
     val outputName = s"VSD.case_${i+1}.${baseSplit(5)}"
 
-    MeshIO.writeMesh(target, new File(data.step3, s"${outputName}.stl"))
-    LandmarkIO.writeLandmarksJson(targetLms, new File(data.step3, s"${outputName}.json"))
+    MeshIO.writeMesh(target, new File(data.step3, s"${outputName.takeRight(2)}.stl"))
+    LandmarkIO.writeLandmarksJson(targetLms, new File(data.step3, s"${outputName.takeRight(2)}.json"))
   }
 }

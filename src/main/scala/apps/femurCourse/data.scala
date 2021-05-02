@@ -1,9 +1,9 @@
-package apps.femur
+package apps.femurCourse
 
 import java.io.File
 
 object data {
-  val data = new File("data")
+  val data = new File("data/ssmCourse")
   val step2 = new File(data, "step2")
   val step3 = new File(data, "paritals_step3")
   val trainingMeshes = new File(step2, "meshes")
@@ -18,4 +18,6 @@ object data {
   val pca = new File(data, "pca.h5")
   val augmented = new File(data, "augmented.h5")
   val completed = new File(data, "completed")
+
+  val groundTruth = new File(data, "evaluation/groundTruths")
 }

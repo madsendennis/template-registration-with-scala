@@ -1,6 +1,6 @@
 package api.registration.icp
 
-import api.registration.utils.NonRigidClosestPointRegistrator.ClosestPointTriangleMesh3D
+import api.registration.utils.ClosestPointRegistrator.ClosestPointTriangleMesh3D
 import breeze.linalg.{DenseMatrix, DenseVector}
 import breeze.numerics.{abs, pow}
 import scalismo.common._

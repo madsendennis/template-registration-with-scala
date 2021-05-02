@@ -11,7 +11,7 @@ import scalismo.transformations.{Scaling, Translation}
 
 import scala.language.higherKinds
 
-class GpmmCpdRegistration[D: NDSpace, DDomain[A] <: DiscreteDomain[A]](
+class GpmmCpdRegistration[D: NDSpace, DDomain[D] <: DiscreteDomain[D]](
                                                                         gpmm: PointDistributionModel[D, DDomain],
                                                                         targetMesh: DDomain[D],
                                                                         gpmmLMs: Seq[Landmark[D]],
@@ -20,7 +20,7 @@ class GpmmCpdRegistration[D: NDSpace, DDomain[A] <: DiscreteDomain[A]](
                                                                         w: Double = 0,
                                                                         max_iterations: Int = 100,
                                                                         modelView: Option[modelViewer] = None
-                                                                      )(implicit warper: DomainWarp[D, DDomain], vectorizer: Vectorizer[Point[D]], pointSequenceConverter: PointSequenceConverter[D]) {
+                                                                      )(implicit warper: DomainWarp[D, DDomain], vectorizer: Vectorizer[Point[D]], pointSequenceConverter: PointSequenceConverter[D], closestPointRegistrator: ClosestPointRegistrator[D, DDomain]) {
   val cpd = new NonRigidCPDwithGPMM(gpmm, targetMesh, gpmmLMs, targetLMs, lambda, w, max_iterations, modelView)
   val zeroGPMMpars: DenseVector[Double] = DenseVector.zeros[Double](gpmm.rank)
 
@@ -39,7 +39,7 @@ class GpmmCpdRegistration[D: NDSpace, DDomain[A] <: DiscreteDomain[A]](
   }
 }
 
-class GpmmBcpdRegistration[D: NDSpace, DDomain[A] <: DiscreteDomain[A]](
+class GpmmBcpdRegistration[D: NDSpace, DDomain[D] <: DiscreteDomain[D]](
                                                                          gpmm: PointDistributionModel[D, DDomain],
                                                                          targetPoints: DDomain[D],
                                                                          w: Double = 0, // Outlier, [0,1]
@@ -48,8 +48,8 @@ class GpmmBcpdRegistration[D: NDSpace, DDomain[A] <: DiscreteDomain[A]](
                                                                          k: Double = 1.0,
                                                                          max_iterations: Int = 100,
                                                                          modelView: Option[modelViewer] = None
-                                                                       )(implicit warper: DomainWarp[D, DDomain], vectorizer: Vectorizer[Point[D]], pointSequenceConverter: PointSequenceConverter[D], simTrans: TransformationHelper[D], viewer: ModelViewerHelper[D]) {
-  val bcpd = new BCPDwithGPMM(gpmm, targetPoints.pointSet.points.toSeq, w, lambda, gamma, k, max_iterations, modelView)
+                                                                       )(implicit warper: DomainWarp[D, DDomain], vectorizer: Vectorizer[Point[D]], pointSequenceConverter: PointSequenceConverter[D], simTrans: TransformationHelper[D], viewer: ModelViewerHelper[D], closestPointRegistrator: ClosestPointRegistrator[D, DDomain]) {
+  val bcpd = new BCPDwithGPMM(gpmm, targetPoints, w, lambda, gamma, k, max_iterations, modelView)
   private val defaultInitialGPMMPars = DenseVector.zeros[Double](gpmm.rank)
 
   private val defaultTransformationPars = SimilarityTransformParameters[D](

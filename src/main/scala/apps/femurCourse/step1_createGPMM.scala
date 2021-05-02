@@ -1,4 +1,4 @@
-package apps.femur
+package apps.femurCourse
 
 import api.registration.utils.{DotProductKernel, GaussianKernelParameters, LookupKernel, PointSetHelper}
 import scalismo.common.interpolation.{NearestNeighborInterpolator, TriangleMeshInterpolator3D}

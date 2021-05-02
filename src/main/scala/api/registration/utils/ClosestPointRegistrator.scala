@@ -17,7 +17,7 @@ trait ClosestPointRegistrator[D, DDomain[D] <: DiscreteDomain[D]] {
   def closestPointCorrespondence(reference: DDomain[D], target: DDomain[D], direction: ClosestPointDirection = ReferenceToTarget): (Seq[(PointId, Point[D], Double)], Double)
 }
 
-object NonRigidClosestPointRegistrator {
+object ClosestPointRegistrator {
 
   // Todo: Different ICP "flavours", closest point in pointset, closest point on surface, closest point along normal
   // Todo: Swap directions
@@ -39,7 +39,7 @@ object NonRigidClosestPointRegistrator {
     (closestIntersectingPoint < (v).norm)
   }
 
-  object ClosestPointTriangleMesh3D extends ClosestPointRegistrator[_3D, TriangleMesh] {
+  implicit object ClosestPointTriangleMesh3D extends ClosestPointRegistrator[_3D, TriangleMesh] {
     override def closestPointCorrespondence(reference: TriangleMesh[_3D], target: TriangleMesh[_3D], direction: ClosestPointDirection): (Seq[(PointId, Point[_3D], Double)], Double) = {
       var distance = 0.0
 
@@ -107,7 +107,7 @@ object NonRigidClosestPointRegistrator {
     }
   }
 
-  object ClosestPointUnstructuredPointsDomain3DTarget extends ClosestPointRegistrator[_3D, UnstructuredPointsDomain] {
+  implicit object ClosestPointUnstructuredPointsDomain3DTarget extends ClosestPointRegistrator[_3D, UnstructuredPointsDomain] {
     override def closestPointCorrespondence(reference: UnstructuredPointsDomain[_3D], target: UnstructuredPointsDomain[_3D], direction: ClosestPointDirection): (Seq[(PointId, Point[_3D], Double)], Double) = {
       var distance = 0.0
       val corr = reference.pointSet.pointIds.toSeq.map { id =>
@@ -121,7 +121,7 @@ object NonRigidClosestPointRegistrator {
     }
   }
 
-    object ClosestPointUnstructuredPointsDomain3D extends ClosestPointRegistrator[_3D, UnstructuredPointsDomain] {
+  implicit object ClosestPointUnstructuredPointsDomain3D extends ClosestPointRegistrator[_3D, UnstructuredPointsDomain] {
       override def closestPointCorrespondence(reference: UnstructuredPointsDomain[_3D], target: UnstructuredPointsDomain[_3D], direction: ClosestPointDirection): (Seq[(PointId, Point[_3D], Double)], Double) = {
         var distance = 0.0
         val corr = reference.pointSet.pointIds.toSeq.map { id =>
@@ -135,7 +135,7 @@ object NonRigidClosestPointRegistrator {
       }
     }
 
-  object ClosestPointUnstructuredPointsDomain2D extends ClosestPointRegistrator[_2D, UnstructuredPointsDomain] {
+  implicit object ClosestPointUnstructuredPointsDomain2D extends ClosestPointRegistrator[_2D, UnstructuredPointsDomain] {
     override def closestPointCorrespondence(reference: UnstructuredPointsDomain[_2D], target: UnstructuredPointsDomain[_2D], direction: ClosestPointDirection): (Seq[(PointId, Point[_2D], Double)], Double) = {
       var distance = 0.0
       val corr = reference.pointSet.pointIds.toSeq.map { id =>
@@ -149,7 +149,7 @@ object NonRigidClosestPointRegistrator {
     }
   }
 
-  object ClosestPointUnstructuredPointsDomain1D extends ClosestPointRegistrator[_1D, UnstructuredPointsDomain] {
+  implicit object ClosestPointUnstructuredPointsDomain1D extends ClosestPointRegistrator[_1D, UnstructuredPointsDomain] {
     override def closestPointCorrespondence(reference: UnstructuredPointsDomain[_1D], target: UnstructuredPointsDomain[_1D], direction: ClosestPointDirection): (Seq[(PointId, Point[_1D], Double)], Double) = {
       var distance = 0.0
       val corr = reference.pointSet.pointIds.toSeq.map { id =>

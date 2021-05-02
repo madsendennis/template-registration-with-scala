@@ -1,10 +1,10 @@
-package apps.femur
+package apps.femurCourse
 
 import java.io.File
 
 import api.registration.GpmmCpdRegistration
-import api.registration.icp.{NonRigidICPwithGPMMTriangle3D, NonRigidICPwithGPMMTriangle3DNormalDirection}
-import api.registration.utils.{DotProductKernel, GaussianKernelParameters, modelViewer}
+import api.registration.icp.NonRigidICPwithGPMMTriangle3D
+import api.registration.utils.modelViewer
 import apps.util.RegistrationComparison
 import scalismo.common.interpolation.{NearestNeighborInterpolator, TriangleMeshInterpolator3D}
 import scalismo.geometry.{EuclideanVector, _3D}
@@ -44,13 +44,13 @@ object step2_simpleNonRigid extends App{
 
 //    try {
         val decGPMMcpd = gpmm.newReference(gpmm.reference.operations.decimate(600), NearestNeighborInterpolator())
-        val gpmmCPD = new GpmmCpdRegistration(decGPMMcpd, target.operations.decimate(2000), Seq(), Seq(), lambda = 1, w = 0, max_iterations = 47, modelView = mv)
+        val gpmmCPD = new GpmmCpdRegistration[_3D, TriangleMesh](decGPMMcpd, target.operations.decimate(2000), Seq(), Seq(), lambda = 1, w = 0, max_iterations = 47, modelView = mv)
         val cpdFit = gpmmCPD.register(tolerance = 0.0001)
 
         RegistrationComparison.evaluateReconstruction2GroundTruthDouble(targetFile.getName, gpmm.instance(cpdFit), target)
 
         val decGPMMicp = gpmm.newReference(gpmm.reference.operations.decimate(5000), NearestNeighborInterpolator())
-        val gpmmICP = new NonRigidICPwithGPMMTriangle3DNormalDirection(decGPMMicp, target.operations.decimate(10000), mv)
+        val gpmmICP = new NonRigidICPwithGPMMTriangle3D(decGPMMicp, target.operations.decimate(10000), mv)
         val icpFit = gpmmICP.Registration(max_iteration = 10, tolerance = 0.000000001, sigma2 = Seq(5.0, 2.0, 1.0, 0.1, 0.001, 0.00001, 0.0000000001), initialGPMM = cpdFit)
         val icpFitMesh = gpmm.instance(icpFit)
 

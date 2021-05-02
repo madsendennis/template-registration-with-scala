@@ -1,6 +1,6 @@
 package api.registration.icp
 
-import api.registration.utils.{CSCHelper, NonRigidClosestPointRegistrator, PointSequenceConverter}
+import api.registration.utils.{CSCHelper, ClosestPointRegistrator, PointSequenceConverter}
 import breeze.linalg.{CSCMatrix, DenseMatrix, SparseVector, diag}
 import scalismo.common.{DomainWarp, PointId, UnstructuredPoints3D, Vectorizer}
 import scalismo.geometry._
@@ -86,7 +86,7 @@ abstract class NonRigidOptimalStepICP(templateMesh: TriangleMesh[_3D],
   }
 
   def getClosestPoints(template: TriangleMesh[_3D], target: TriangleMesh[_3D]): (Seq[Point[_3D]], Seq[Double], Double) = {
-    val (corr, dist) = NonRigidClosestPointRegistrator.ClosestPointTriangleMesh3D.closestPointCorrespondence(template, target)
+    val (corr, dist) = ClosestPointRegistrator.ClosestPointTriangleMesh3D.closestPointCorrespondence(template, target)
     val cp = corr.map(_._2)
     val w = corr.map(_._3)
     (cp, w, dist)

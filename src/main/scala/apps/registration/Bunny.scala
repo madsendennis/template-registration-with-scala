@@ -6,7 +6,6 @@ import java.io.File
 import api.registration.icp.NonRigidICPwithGPMMTriangle3D
 import api.registration.{GpmmBcpdRegistration, GpmmCpdRegistration}
 import api.registration.utils.{GPMMTriangleMesh3D, RigidTransforms, modelViewer}
-import apps.kernels.VisualizeKernels.ui
 import scalismo.common.interpolation.TriangleMeshInterpolator3D
 import scalismo.geometry.{EuclideanVector, Point, _3D}
 import scalismo.io.{MeshIO, StatisticalModelIO}

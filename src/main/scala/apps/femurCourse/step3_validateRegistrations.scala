@@ -1,9 +1,8 @@
-package apps.femur
+package apps.femurCourse
 
 import java.io.File
 
 import api.registration.GpmmCpdRegistration
-import api.registration.icp.NonRigidICPwithGPMMTriangle3DNormalDirection
 import api.registration.utils.modelViewer
 import apps.util.RegistrationComparison
 import scalismo.common.interpolation.NearestNeighborInterpolator

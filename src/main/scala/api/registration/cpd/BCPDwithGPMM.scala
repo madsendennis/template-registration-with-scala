@@ -15,7 +15,7 @@ case class BCPDParameters[D](alpha: DenseVector[Double], sigma2: Double, simTran
 
 abstract class GPMMfitting[D: NDSpace, DDomain[D] <: DiscreteDomain[D]](
                                                                          gpmm: PointDistributionModel[D, DDomain],
-                                                                         targetPoints: Seq[Point[D]],
+                                                                         targetDomain: DDomain[D],
                                                                          w: Double, // Outlier, [0,1]
                                                                          lambda: Double, // Noise scaling, R+
                                                                          gamma: Double, // Initial noise scaling, R+
@@ -34,6 +34,8 @@ abstract class GPMMfitting[D: NDSpace, DDomain[D] <: DiscreteDomain[D]](
   require(gamma > 0)
   require(k > 0)
   require(0 <= w && w < 1.0)
+
+  val targetPoints: Seq[Point[D]] =  targetDomain.pointSet.points.toSeq
 
   val dim: Int = vectorizer.dim
   val referencePoints: Seq[Point[D]] = gpmm.reference.pointSet.points.toSeq
@@ -112,7 +114,7 @@ abstract class GPMMfitting[D: NDSpace, DDomain[D] <: DiscreteDomain[D]](
 
 class BCPDwithGPMM[D: NDSpace, DDomain[D] <: DiscreteDomain[D]](
                                                                  gpmm: PointDistributionModel[D, DDomain],
-                                                                 targetPoints: Seq[Point[D]],
+                                                                 targetDomain: DDomain[D],
                                                                  w: Double, // Outlier, [0,1]
                                                                  lambda: Double, // Noise scaling, R+
                                                                  gamma: Double, // Initial noise scaling, R+
@@ -124,11 +126,16 @@ class BCPDwithGPMM[D: NDSpace, DDomain[D] <: DiscreteDomain[D]](
                                                                  domainWarper: DomainWarp[D, DDomain],
                                                                  dataConverter: PointSequenceConverter[D],
                                                                  simTrans: TransformationHelper[D],
-                                                                 viewer: ModelViewerHelper[D]
-                                                               ) extends GPMMfitting(gpmm, targetPoints, w, lambda, gamma, k, max_iterations, modelView) {
+                                                                 viewer: ModelViewerHelper[D],
+                                                                 closestPointRegistrator: ClosestPointRegistrator[D, DDomain]
+                                                               ) extends GPMMfitting(gpmm, targetDomain, w, lambda, gamma, k, max_iterations, modelView) {
 
   override def Iteration(gpmmPars: DenseVector[Double], pars: BCPDParameters[D], transformationType: GlobalTranformationType): (DenseVector[Double], BCPDParameters[D]) = {
     val instance = gpmm.instance(gpmmPars)
+
+    val (cpInfo, _) = closestPointRegistrator.closestPointCorrespondence(instance, targetDomain)
+    val idFilter = cpInfo.map(_._3.toInt)
+
     val instancePoints = pars.simTrans.transform(instance.pointSet.points.toSeq)
     val P = computeCorrespondenceProbability(instancePoints, pars.sigma2, pars.simTrans.s.s, pars.alpha)
     val v = sum(P, Axis._1) // R^M Estimated number of target points matched with each source point
@@ -143,7 +150,8 @@ class BCPDwithGPMM[D: NDSpace, DDomain[D] <: DiscreteDomain[D]](
 
     val gpTrainingData = (0 until M).map { i =>
       (PointId(i), xhatTinv(i), MultivariateNormalDistribution(DenseVector.zeros[Double](dim), DenseMatrix.eye[Double](dim) * lambda * sigma2DIVs2 / v(i)))
-    }
+    }.zip(idFilter).filter(_._2==1).map(_._1)
+
     val gpmmRegression = gpmm.newReference(instance, NearestNeighborInterpolator()).posterior(gpTrainingData)
     val myVhat = gpmmRegression.gp.meanVector
 
@@ -157,7 +165,7 @@ class BCPDwithGPMM[D: NDSpace, DDomain[D] <: DiscreteDomain[D]](
 
     val newTransform = transformationType match {
       case SimilarityTransforms => simTrans.getSimilarityTransform(uhatPoints, xhat)
-      case RigidTransforms => simTrans.getRigidTransform(uhatPoints, xhat)
+      case RigidTransforms => simTrans.getRigidTransform(uhatPoints.zip(idFilter).filter(_._2==1).map(_._1), xhat.zip(idFilter).filter(_._2==1).map(_._1))
       case _ => pars.simTrans
     }
 
@@ -199,15 +207,16 @@ class SpecialICPwithGPMM(
                           domainWarper: DomainWarp[_3D, TriangleMesh],
                           dataConverter: PointSequenceConverter[_3D],
                           simTrans: TransformationHelper[_3D],
-                          viewer: ModelViewerHelper[_3D]
-                        ) extends GPMMfitting(gpmm, target.pointSet.points.toSeq, w, lambda, gamma, k, max_iterations, modelView) {
+                          viewer: ModelViewerHelper[_3D],
+                          closestPointRegistrator: ClosestPointRegistrator[_3D, TriangleMesh]
+                        ) extends GPMMfitting(gpmm, target, w, lambda, gamma, k, max_iterations, modelView) {
 
   override def Iteration(gpmmPars: DenseVector[Double], pars: BCPDParameters[_3D], transformationType: GlobalTranformationType): (DenseVector[Double], BCPDParameters[_3D]) = {
     val initialTransformation = TranslationAfterScalingAfterRotation(pars.simTrans.t, pars.simTrans.s, pars.simTrans.R)
     val instance = gpmm.instance(gpmmPars)
     val instanceTransform = instance.transform(initialTransformation)
 
-    val closestPoints = NonRigidClosestPointRegistrator.ClosestPointTriangleMesh3D.closestPointCorrespondence(instanceTransform, target)._1
+    val closestPoints = ClosestPointRegistrator.ClosestPointTriangleMesh3D.closestPointCorrespondence(instanceTransform, target)._1
     val closestPointsFiltered = closestPoints.filter(_._3 == 1.0)
 
     val vSim = DenseVector(closestPoints.map(_._3).toArray)
