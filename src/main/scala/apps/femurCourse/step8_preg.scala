@@ -71,8 +71,8 @@ object step8_preg extends App {
     val decTargetEval = target.operations.decimate(400)
 
     val decGPMM = gpmm.decimate(samplePointsModel)
-    val proposalCP1 = MixedProposalDistributions.mixedProposalICP(decGPMM, decTarget, Seq(), Seq(), samplePointsTarget, projectionDirection = TargetSampling, tangentialNoise = 100.0, noiseAlongNormal = 5.0, stepLength = 0.1)
-    val proposalCP2 = MixedProposalDistributions.mixedProposalICP(decGPMM, decTarget, Seq(), Seq(), samplePointsTarget, projectionDirection = TargetSampling, tangentialNoise = 100.0, noiseAlongNormal = 5.0, stepLength = 0.5)
+    val proposalCP1 = MixedProposalDistributions.mixedProposalICP(decGPMM, decTarget, Seq(), Seq(), projectionDirection = TargetSampling, tangentialNoise = 100.0, noiseAlongNormal = 5.0, stepLength = 0.1)
+    val proposalCP2 = MixedProposalDistributions.mixedProposalICP(decGPMM, decTarget, Seq(), Seq(), projectionDirection = TargetSampling, tangentialNoise = 100.0, noiseAlongNormal = 5.0, stepLength = 0.5)
     val proposalPose = MixedProposalDistributions.randomPoseProposal(1.0)
     val proposalRandom = MixedProposalDistributions.mixedProposalRandom(gpmm)
 

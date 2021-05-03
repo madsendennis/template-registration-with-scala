@@ -121,7 +121,7 @@ object StdIcpVsChainICPrandomInitComparisonAll {
       innerLoop.foreach { case (i) =>
         println(s"Starting fitting with random initialization of shape parameters: $i")
 
-        val proposalIcp = MixedProposalDistributions.mixedProposalICP(model, targetMesh, Seq(),Seq(), numOfICPpointSamples, projectionDirection = ModelAndTargetSampling, tangentialNoise = 100.0, noiseAlongNormal = normalNoise, stepLength = 0.1, boundaryAware = true)
+        val proposalIcp = MixedProposalDistributions.mixedProposalICP(model, targetMesh, Seq(),Seq(), projectionDirection = ModelAndTargetSampling, tangentialNoise = 100.0, noiseAlongNormal = normalNoise, stepLength = 0.1, boundaryAware = true)
 
         val rotatCenter: EuclideanVector[_3D] = model.referenceMesh.pointSet.points.map(_.toVector).reduce(_ + _) * 1.0 / model.referenceMesh.pointSet.numberOfPoints.toDouble
         val initPoseParameters = PoseParameters(EuclideanVector3D(0, 0, 0), (0, 0, 0), rotationCenter = rotatCenter.toPoint)
@@ -143,7 +143,8 @@ object StdIcpVsChainICPrandomInitComparisonAll {
         val showTarget = ui.show(targetGroup, targetMesh, "target")
         showTarget.color = Color.YELLOW
 
-        val bestDeterministicRegistration = IcpRegistration.fitting(model, targetMesh, model.referenceMesh.pointSet.numberOfPoints, 100, Option(showModel), initialParameters = Option(initPars))
+        val bestDeterministicPars = IcpRegistration.fitting(model, targetMesh, model.referenceMesh.pointSet.numberOfPoints, 100, Option(showModel), initialParameters = Option(initPars))
+        val bestDeterministicRegistration = ModelFittingParameters.transformedMesh(model, bestDeterministicPars)
         ui.show(finalGroup, bestDeterministicRegistration, "ICP_best")
 
         val evaluatorEuclidean = ProductEvaluators.proximityAndIndependent(model, targetMesh, ModelToTargetEvaluation, uncertainty = 1.0, numberOfEvaluationPoints = numOfEvalPoints)
@@ -152,11 +153,12 @@ object StdIcpVsChainICPrandomInitComparisonAll {
         val numOfSamples = 10000
 
         val samplingLoggerPathEuclidean = new File(logPath, s"ICPComparisonEuclidean-$normalNoise-$basename-$targetname-samples-$numOfSamples-$i-index.json")
-        val bestSamplingRegistrationEuclidean = IcpProposalRegistration.fitting(model, targetMesh, evaluatorEuclidean, proposalIcp, numOfSamples, Option(showModel), samplingLoggerPathEuclidean, initialParameters = Option(initPars))
+        val bestSamplingParsEuclidean = IcpProposalRegistration.fitting(model, targetMesh, evaluatorEuclidean, proposalIcp, numOfSamples, Option(showModel), samplingLoggerPathEuclidean, initialParameters = Option(initPars))
+        val bestSamplingRegistrationEuclidean = ModelFittingParameters.transformedMesh(model, bestSamplingParsEuclidean)
 
         val samplingLoggerPathHausdorff = new File(logPath, s"ICPComparisonHausdorff-$normalNoise-$basename-$targetname-samples-$numOfSamples-$i-index.json")
-        val bestSamplingRegistrationHausdorff = IcpProposalRegistration.fitting(model, targetMesh, evaluatorHausdorff, proposalIcp, numOfSamples, Option(showModel), samplingLoggerPathHausdorff, initialParameters = Option(initPars))
-
+        val bestSamplingParsHausdorff = IcpProposalRegistration.fitting(model, targetMesh, evaluatorHausdorff, proposalIcp, numOfSamples, Option(showModel), samplingLoggerPathHausdorff, initialParameters = Option(initPars))
+        val bestSamplingRegistrationHausdorff = ModelFittingParameters.transformedMesh(model, bestSamplingParsHausdorff)
         appendExperiment(model, experimentLogger, i, targetMesh, bestSamplingRegistrationEuclidean, bestSamplingRegistrationHausdorff, bestDeterministicRegistration, targetMeshFile.toString, samplingLoggerPathEuclidean.toString, samplingLoggerPathHausdorff.toString, initPars.shapeParameters.parameters, numOfEvalPoints, numOfSamples, normalNoise, "")
       }
     }

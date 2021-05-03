@@ -19,12 +19,12 @@ package apps.femur
 import java.awt.Color
 import java.io.File
 
-import api.other.{ModelAndTargetSampling, ModelSampling, RegistrationComparison, TargetSampling}
+import api.other.{ModelSampling, RegistrationComparison, TargetSampling}
 import api.sampling._
-import api.sampling.evaluators.{ModelToTargetEvaluation, SymmetricEvaluation}
+import api.sampling.evaluators.ModelToTargetEvaluation
+import api.sampling.proposals.NonRigidCpdProposal
 import apps.femur.Paths.dataFemurPath
-import scalismo.geometry._3D
-import scalismo.mesh.{TriangleMesh, TriangleMesh3D}
+import scalismo.mesh.TriangleMesh3D
 import scalismo.sampling.DistributionEvaluator
 import scalismo.sampling.proposals.MixtureProposal
 import scalismo.sampling.proposals.MixtureProposal.ProposalGeneratorWithTransition
@@ -32,7 +32,7 @@ import scalismo.statisticalmodel.StatisticalMeshModel
 import scalismo.ui.api.{ScalismoUI, StatisticalMeshModelViewControls}
 import scalismo.utils.Random.implicits.randomGenerator
 
-object IcpProposalRegistration {
+object CpdProposalRegistration {
 
   def fitting(model: StatisticalMeshModel, targetMesh: TriangleMesh3D, evaluator: Map[String, DistributionEvaluator[ModelFittingParameters]], proposal: ProposalGeneratorWithTransition[ModelFittingParameters], numOfIterations: Int, showModel: Option[StatisticalMeshModelViewControls], log: File, initialParameters: Option[ModelFittingParameters] = None): ModelFittingParameters = {
 
@@ -66,10 +66,9 @@ object IcpProposalRegistration {
     *  - ModelSampling (if registering noisy meshes)
     *  - ModelAndTargetSampling (if registering clean complete meshes)
     ***** ***** ***** ***** ***** *****/
-    val proposal1 = MixedProposalDistributions.mixedProposalICP(model.decimate(100), targetMesh, Seq(),Seq(), projectionDirection = ModelSampling, tangentialNoise = 100.0, noiseAlongNormal = 5.0, stepLength = 0.5)
-    val proposal2 = MixedProposalDistributions.mixedProposalICP(model, targetMesh.operations.decimate(100), Seq(),Seq(), projectionDirection = TargetSampling, tangentialNoise = 100.0, noiseAlongNormal = 5.0, stepLength = 0.5)
-
-    val proposal = MixtureProposal.fromProposalsWithTransition(Seq((0.5, proposal1), (0.5, proposal2)): _ *)
+    val proposalCpd1 = NonRigidCpdProposal(model.decimate(100), targetMesh.operations.decimate(100), stepLength = 0.5, generatedBy = "ShapeCpdProposal-step-0.5")
+    val proposalCpd2 = NonRigidCpdProposal(model.decimate(100), targetMesh.operations.decimate(100), stepLength = 0.1, generatedBy = "ShapeCpdProposal-step-0.1")
+    val proposal = MixtureProposal.fromProposalsWithTransition(Seq((0.5, proposalCpd1), (0.5, proposalCpd2)): _ *)
     /* Uncomment below to use the standard "Random walk proposal" proposal */
 //    val proposal = MixedProposalDistributions.mixedProposalRandom(model)
 
@@ -97,7 +96,7 @@ object IcpProposalRegistration {
     ui.show(targetGroup, targetLms, "landmarks")
     showTarget.color = Color.YELLOW
 
-    val bestPars = fitting(model, targetMesh, evaluator, proposal, numOfSamples, Option(showModel), new File(logPath, s"icpProposalRegistration.json"))
+    val bestPars = fitting(model, targetMesh, evaluator, proposal, numOfSamples, Option(showModel), new File(logPath, s"cpdProposalRegistration.json"))
     val bestRegistration = ModelFittingParameters.transformedMesh(model, bestPars)
     ui.show(finalGroup, bestRegistration, "best-fit")
     RegistrationComparison.evaluateReconstruction2GroundTruth("SAMPLE", bestRegistration, targetMesh)

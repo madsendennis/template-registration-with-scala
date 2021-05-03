@@ -54,7 +54,7 @@ object MixedProposalDistributions {
     mixproposal
   }
 
-  def mixedProposalICP(model: StatisticalMeshModel, target: TriangleMesh3D, modelLM: Seq[Landmark[_3D]], targetLM: Seq[Landmark[_3D]],numOfSamplePoints: Int, projectionDirection: IcpProjectionDirection = ModelAndTargetSampling, tangentialNoise: Double = 100.0, noiseAlongNormal: Double = 3.0, stepLength: Double = 0.1, boundaryAware: Boolean = true): ProposalGeneratorWithTransition[ModelFittingParameters] = {
+  def mixedProposalICP(model: StatisticalMeshModel, target: TriangleMesh3D, modelLM: Seq[Landmark[_3D]], targetLM: Seq[Landmark[_3D]], projectionDirection: IcpProjectionDirection = ModelAndTargetSampling, tangentialNoise: Double = 100.0, noiseAlongNormal: Double = 3.0, stepLength: Double = 0.1, boundaryAware: Boolean = true): ProposalGeneratorWithTransition[ModelFittingParameters] = {
 
     val rate = 0.5
 

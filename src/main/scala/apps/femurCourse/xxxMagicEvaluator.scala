@@ -14,7 +14,7 @@ case class MeshDistances(avgDistance: Double, hausdorffDistance: Double)
 
 object xxxMagicEvaluator extends App{
   scalismo.initialize()
-  val completedPath = new File(data.completed, "preg_pca2_2mm").listFiles(_.getName.endsWith(".stl")).sorted
+  val completedPath = new File(data.completed, "myBest").listFiles(_.getName.endsWith(".stl")).sorted
 
   val targetPath = data.step3.listFiles(_.getName.endsWith(".stl"))
   val groundTruth = data.groundTruth.listFiles(_.getName.endsWith(".stl"))

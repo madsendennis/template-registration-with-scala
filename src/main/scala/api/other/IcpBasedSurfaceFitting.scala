@@ -16,13 +16,13 @@
 
 package api.other
 
+import api.registration.utils.{ClosestPointRegistrator, ReferenceToTarget, TargetToReference}
+import api.sampling.SurfaceNoiseHelpers
 import breeze.linalg.DenseVector
 import com.typesafe.scalalogging.Logger
-import scalismo.common.PointId
 import scalismo.common.interpolation.NearestNeighborInterpolator
 import scalismo.geometry._
 import scalismo.mesh.TriangleMesh3D
-import scalismo.numerics.UniformMeshSampler3D
 import scalismo.registration.GaussianProcessTransformationSpace
 import scalismo.statisticalmodel.StatisticalMeshModel
 import scalismo.transformations.{TranslationAfterRotation, TranslationAfterRotationSpace3D}
@@ -42,15 +42,20 @@ case class IcpBasedSurfaceFitting(model: StatisticalMeshModel, target: TriangleM
 
   val logger: Logger = Logger("ICP-Logger")
 
+  val noiseAlongNormal = 5.0
+  val tangentialNoise = 100.0
 
-  def runfitting(numIterations: Int, iterationSeq: Seq[Double] = defIterations, initialModelParameters: Option[(DenseVector[Double], TranslationAfterRotation[_3D])] = None): TriangleMesh3D = {
+  def runfitting(numIterations: Int, iterationSeq: Seq[Double] = defIterations, initialModelParameters: Option[(DenseVector[Double], TranslationAfterRotation[_3D])] = None): DenseVector[Double] = {
 
     val initialParameters = initialModelParameters.getOrElse(zeroParameters)
 
     val center: EuclideanVector[_3D] = model.referenceMesh.pointSet.points.map(_.toVector).reduce(_ + _) * 1.0 / model.referenceMesh.pointSet.numberOfPoints.toDouble
-    val targetPointSamples = UniformMeshSampler3D(target, numOfSamplePoints).sample.map(s => s._1)
-    val modelPointSamples = UniformMeshSampler3D(model.referenceMesh, numOfSamplePoints).sample.map(s => s._1)
-    val pointIds = modelPointSamples.map { s => model.referenceMesh.pointSet.findClosestPoint(s).id }
+    //    val targetPointSamples = UniformMeshSampler3D(target, numOfSamplePoints).sample.map(s => s._1)
+    //    val modelPointSamples = UniformMeshSampler3D(model.referenceMesh, numOfSamplePoints).sample.map(s => s._1)
+    //    val pointIds = modelPointSamples.map { s => model.referenceMesh.pointSet.findClosestPoint(s).id }
+    val modelDec = model.decimate(numOfSamplePoints)
+    val targetDec = target.operations.decimate(numOfSamplePoints)
+
 
     def recursion(params: DenseVector[Double], nbIterations: Int, sigma: Double, currentTrans: TranslationAfterRotation[_3D] = rigidIdentity): (DenseVector[Double], TranslationAfterRotation[_3D]) = {
       if ((numIterations - nbIterations) % 10 == 0) {
@@ -58,30 +63,33 @@ case class IcpBasedSurfaceFitting(model: StatisticalMeshModel, target: TriangleM
       }
       val finalTrans = currentTrans
 
-      val instanceAligned = model.transform(currentTrans).instance(params)
-
-      val projectionDirectionLocal =
-        if (projectionDirection == ModelSampling) ModelSampling
-        else if (projectionDirection == TargetSampling) TargetSampling
-        else {
-          if (scala.util.Random.nextBoolean) ModelSampling
-          else TargetSampling
+      val newCoeffInit = if (projectionDirection == TargetSampling || (projectionDirection == ModelAndTargetSampling && scala.util.Random.nextBoolean)) {
+        val instance = model.transform(currentTrans).instance(params)
+        val cpInfo = ClosestPointRegistrator.ClosestPointTriangleMesh3D.closestPointCorrespondence(instance, targetDec, direction = TargetToReference)
+        val cp = cpInfo._1.filter(_._3 == 1.0).toIndexedSeq
+        val corr = cp.map{case(id, p, _) =>
+          val noiseDistribution = SurfaceNoiseHelpers.surfaceNormalDependantNoise(instance.vertexNormals.atPoint(id), noiseAlongNormal, tangentialNoise)
+          (id, p, noiseDistribution)
         }
-
-      val corrPandId: IndexedSeq[(PointId, Point[_3D])] = if (projectionDirectionLocal == ModelSampling) {
-        val currentPoints = pointIds.map(id => (id, instanceAligned.pointSet.point(id)))
-        currentPoints.map { case (id, pt) => (id, target.operations.closestPointOnSurface(pt).point) }.toIndexedSeq
+        val posterior = model.posterior(corr)
+        val fit = posterior.mean
+        model.coefficients(fit)
       }
       else {
-        targetPointSamples.map { pt =>
-          (instanceAligned.pointSet.findClosestPoint(pt).id, pt)
-        }.toIndexedSeq
+        val instance = modelDec.transform(currentTrans).instance(params)
+        val cpInfo = ClosestPointRegistrator.ClosestPointTriangleMesh3D.closestPointCorrespondence(instance, target, direction = ReferenceToTarget)
+        val cp = cpInfo._1.filter(_._3 == 1.0).toIndexedSeq
+        val corr = cp.map{case(id, p, _) =>
+          val noiseDistribution = SurfaceNoiseHelpers.surfaceNormalDependantNoise(instance.vertexNormals.atPoint(id), noiseAlongNormal, tangentialNoise)
+          (id, p, noiseDistribution)
+        }
+        val posterior = modelDec.posterior(corr)
+        val fit = posterior.mean
+        modelDec.coefficients(fit)
       }
 
-      val posterior = model.posterior(corrPandId, sigma)
-      val fit = posterior.mean
 
-      val newCoeffInit = model.coefficients(fit)
+
       val newCoeff = params + (newCoeffInit - params) * stepLength
 
 
@@ -92,12 +100,10 @@ case class IcpBasedSurfaceFitting(model: StatisticalMeshModel, target: TriangleM
       }
 
       if (nbIterations > 0) {
-        try
-        {
+        try {
           recursion(newCoeff, nbIterations - 1, sigma, finalTrans)
         }
-        catch
-        {
+        catch {
           case e: Exception => {
             System.err.println(s"An error occured in IcpBasedSurfaceFitting, iteration: ${numIterations - nbIterations}) / ${numIterations}")
             System.err.println(e)
@@ -124,6 +130,6 @@ case class IcpBasedSurfaceFitting(model: StatisticalMeshModel, target: TriangleM
     }
     val finalTransform = transformationSpace.transformationForParameters(finalRegResult._1)
 
-    model.transform(finalRegResult._2).instance(finalRegResult._1)
+    finalRegResult._1
   }
 }

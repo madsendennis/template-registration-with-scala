@@ -42,7 +42,9 @@ class NonRigidCPDwithGPMM[D: NDSpace, DDomain[D] <: DiscreteDomain[D]](
     val fit = (0 until max_iteration).foldLeft((initialGPMMpars, sigma2Init)) { (it, i) =>
       val parsInit = it._1
       val sigma2 = it._2
-      println(s"CPD, iteration: ${i}/${max_iteration}, sigma2: ${sigma2}")
+      if(i%10 == 0) {
+        println(s"CPD, iteration: ${i}/${max_iteration}, sigma2: ${sigma2}")
+      }
       val iter = Iteration(parsInit, target, sigma2)
       if (modelView.nonEmpty) {
         if (i % modelView.get.updateFrequency == 0) {
@@ -72,7 +74,7 @@ class NonRigidCPDwithGPMM[D: NDSpace, DDomain[D] <: DiscreteDomain[D]](
     sumDist / (vectorizer.dim * N * M)
   }
 
-  private def computeSigma2(X: DenseMatrix[Double], TY: DenseMatrix[Double], P: DenseMatrix[Double]): Double = {
+  def computeSigma2(X: DenseMatrix[Double], TY: DenseMatrix[Double], P: DenseMatrix[Double]): Double = {
     val P1 = sum(P, Axis._1)
     val Pt1 = sum(P, Axis._0)
     val Np = sum(P1)
@@ -133,17 +135,17 @@ class NonRigidCPDwithGPMM[D: NDSpace, DDomain[D] <: DiscreteDomain[D]](
     val (closestPoints, pmat: DenseMatrix[Double]) = getCorrespondence(referencePoints, target, sigma2)
     val corr = instance.pointSet.pointIds.toSeq.zip(closestPoints).map(t => (t._1, t._2._1, t._2._2)).toIndexedSeq ++ lmCP
 
-    val cpInfo = closestPointRegistrator.closestPointCorrespondence(instance, targetMesh)._1.map(_._3)
-    val corrFiltered = corr.zip(cpInfo).filter(f => f._2==1.0).map(_._1)  // Remove points from training data where nearest point is on boundary
+//    val cpInfo = closestPointRegistrator.closestPointCorrespondence(instance, targetMesh)._1.map(_._3)
+//    val corrFiltered = corr.zip(cpInfo).filter(f => f._2==1.0).map(_._1)  // Remove points from training data where nearest point is on boundary
 
-    val posteriorMean = gpmm.posterior(corrFiltered).mean
+    val posteriorMean = gpmm.posterior(corr).mean
 
     //    val posteriorMean = gpmm.posterior(cp, sigma2 * lambda).mean
 
     val TY = dataConverter.toMatrix(posteriorMean.pointSet.points.toSeq)
     val X = dataConverter.toMatrix(target)
     val newSigma2 = computeSigma2(TY, X, pmat)
-
-    (gpmm.coefficients(posteriorMean), newSigma2)
+    val newCoeff = gpmm.coefficients(posteriorMean)
+    (newCoeff, newSigma2)
   }
 }

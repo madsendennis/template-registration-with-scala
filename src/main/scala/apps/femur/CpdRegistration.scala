@@ -18,33 +18,30 @@ package apps.femur
 
 import java.awt.Color
 
-import api.other.{IcpBasedSurfaceFitting, ModelAndTargetSampling, ModelSampling, RegistrationComparison, TargetSampling}
+import api.other.{IcpBasedSurfaceFitting, ModelSampling, RegistrationComparison}
+import api.registration.GpmmCpdRegistration
+import api.registration.utils.modelViewer
 import api.sampling._
+import scalismo.common.interpolation.NearestNeighborInterpolator
 import scalismo.geometry._3D
 import scalismo.mesh.{TriangleMesh, TriangleMesh3D}
-import scalismo.statisticalmodel.StatisticalMeshModel
+import scalismo.statisticalmodel.{PointDistributionModel, StatisticalMeshModel}
 import scalismo.ui.api.{ScalismoUI, StatisticalMeshModelViewControls}
 
-object IcpRegistration {
+object CpdRegistration {
 
-  def fitting(model: StatisticalMeshModel, targetMesh: TriangleMesh3D, numOfSamplePoints: Int, numOfIterations: Int, showModel: Option[StatisticalMeshModelViewControls], initialParameters: Option[ModelFittingParameters] = None): ModelFittingParameters = {
+  def fitting(model: StatisticalMeshModel, targetMesh: TriangleMesh3D, numOfIterations: Int, mv: Option[modelViewer], tolerance: Double = 0.0001, initialParameters: Option[ModelFittingParameters] = None): ModelFittingParameters = {
 
-    val initPars =
-      if (initialParameters.isDefined) {
-        Option(initialParameters.get.shapeParameters.parameters, ModelFittingParameters.poseTransform(initialParameters.get))
-      }
-      else {
-        None
-      }
+    val initPars = initialParameters.getOrElse(ModelFittingParameters.zeroInitialization(model))
 
-    val icpFitting = IcpBasedSurfaceFitting(model, targetMesh, numOfSamplePoints, projectionDirection = ModelSampling, showModel = showModel)
+    val modelConvert = PointDistributionModel[_3D, TriangleMesh](model.referenceMesh, model.gp.interpolate(NearestNeighborInterpolator()))
+    val gpmmCPD = new GpmmCpdRegistration[_3D, TriangleMesh](modelConvert, targetMesh, Seq(), Seq(), lambda = 1, w = 0, max_iterations = numOfIterations, modelView = mv)
+
     val t0 = System.currentTimeMillis()
-
-    val bestPars = icpFitting.runfitting(numOfIterations, iterationSeq = Seq(1e-15), initialModelParameters = initPars)
+    val bestPars = gpmmCPD.register(tolerance = tolerance, initialGPMM = initPars.shapeParameters.parameters)
     val t1 = System.currentTimeMillis()
     println(s"ICP-Timing: ${(t1 - t0) / 1000.0} sec")
-    val pars = initialParameters.getOrElse(ModelFittingParameters.zeroInitialization(model))
-    pars.copy(shapeParameters = ShapeParameters(bestPars))
+    initPars.copy(shapeParameters = ShapeParameters(bestPars))
   }
 
 
@@ -58,7 +55,7 @@ object IcpRegistration {
     val numOfEvaluatorPoints = 100 // Used for the evaluation
     val numOfIterations = 100 // Number of ICP iterations
 
-    val ui = ScalismoUI(s"ICP-registration")
+    val ui = ScalismoUI(s"CPD-registration")
     val modelGroup = ui.createGroup("modelGroup")
     val targetGroup = ui.createGroup("targetGroup")
     val finalGroup = ui.createGroup("finalGroup")
@@ -69,7 +66,10 @@ object IcpRegistration {
     ui.show(targetGroup, targetLms, "landmarks")
     showTarget.color = Color.YELLOW
 
-    val bestPars = fitting(model, targetMesh, numOfEvaluatorPoints, numOfIterations = numOfIterations, showModel = Option(showModel))
+    val mv: Option[modelViewer] = Option(modelViewer(showModel.shapeModelTransformationView, 10))
+
+
+    val bestPars = fitting(model.decimate(numOfEvaluatorPoints), targetMesh.operations.decimate(numOfEvaluatorPoints), numOfIterations = numOfIterations, mv = mv, tolerance = 0.00001)
     val bestRegistration = ModelFittingParameters.transformedMesh(model, bestPars)
     ui.show(finalGroup, bestRegistration, "best-fit")
     RegistrationComparison.evaluateReconstruction2GroundTruth("SAMPLE", bestRegistration, targetMesh)

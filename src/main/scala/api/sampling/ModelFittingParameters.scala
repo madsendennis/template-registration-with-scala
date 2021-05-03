@@ -19,7 +19,7 @@ package api.sampling
 import breeze.linalg.DenseVector
 import scalismo.common.PointId
 import scalismo.common.interpolation.NearestNeighborInterpolator
-import scalismo.geometry.{EuclideanVector, Point, _3D}
+import scalismo.geometry.{EuclideanVector, Point, Point3D, _3D}
 import scalismo.mesh.TriangleMesh
 import scalismo.statisticalmodel.StatisticalMeshModel
 import scalismo.transformations._
@@ -118,6 +118,10 @@ object ModelFittingParameters {
     val t = fullTransform(model, parameters)
     val ps = model.referenceMesh.pointSet
     pointIds.map(id => t(ps.point(id)))
+  }
+
+  def zeroInitialization(model: StatisticalMeshModel): ModelFittingParameters = {
+    ModelFittingParameters(ScaleParameter(1.0), PoseParameters(EuclideanVector(0,0,0), (0,0,0), Point3D(0,0,0)), ShapeParameters(DenseVector.zeros[Double](model.rank)))
   }
 
 
