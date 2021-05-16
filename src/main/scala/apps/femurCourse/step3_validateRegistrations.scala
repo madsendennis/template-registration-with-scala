@@ -16,13 +16,13 @@ object step3_validateRegistrations extends App{
 
   val meshesRaw = data.alignedMeshes.listFiles(_.getName.endsWith(".stl"))
 
-  meshesRegistered.foreach{regFile =>
+  val tot = meshesRegistered.map{regFile =>
     val rawFile = new File(data.alignedMeshes, regFile.getName)
 
     val registered = MeshIO.readMesh(regFile).get
     val aligned = MeshIO.readMesh(rawFile).get
 
     RegistrationComparison.evaluateReconstruction2GroundTruthDouble(regFile.getName, registered, aligned)
-
   }
+  println(s"Total, len: ${tot.length.toDouble}, avg: ${tot.map(_._1).sum/tot.length.toDouble}, hauss: ${tot.map(_._2).sum/tot.length.toDouble}")
 }

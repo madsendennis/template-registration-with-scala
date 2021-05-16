@@ -14,7 +14,7 @@ object CompareKernels extends App{
   scalismo.initialize()
 
   val transform = TranslationAfterRotation[_3D](Translation(EuclideanVector(0, 0, 0)), Rotation(0, math.Pi, 0, Point(0,0,0)))
-  val armadillo = MeshIO.readMesh(new File("data/armadillo/armadillo_scaled.ply")).get.operations.decimate(2000)
+  val armadillo = MeshIO.readMesh(new File("data/armadillo/armadillo_scaled.ply")).get
   val armailloLms = LandmarkIO.readLandmarksJson3D(new File("data/armadillo/armadillo.json")).get
 
   val toePoint = armailloLms.find(_.id=="foot_right").get
@@ -22,32 +22,34 @@ object CompareKernels extends App{
 
   val reference = armadillo
 
+  val karateReference = MeshIO.readMesh(new File("data/armadillo/armadillo_karate.ply")).get
+
   val ps = PointSetHelper[_3D, TriangleMesh](reference)
   val maxDist = ps.maximumPointDistance(reference.pointSet)
   val minDist = ps.minimumPointDistance(reference.pointSet)
 
-  val gpmmHelp = GPMMTriangleMesh3D(reference, relativeTolerance = 0.0)
+  val gpmmHelp = GPMMTriangleMesh3D(karateReference, relativeTolerance = 0.0)
   println("Starting")
   val gpmmModelL = gpmmHelp.GaussianMixture(Seq(GaussianKernelParameters(maxDist/4, maxDist/8))).truncate(1000)
-  StatisticalModelIO.writeStatisticalTriangleMeshModel3D(gpmmModelL, new File("data/armadillo/models/gaussL_high.h5"))
+  StatisticalModelIO.writeStatisticalTriangleMeshModel3D(gpmmModelL, new File("data/armadillo/karatemodels/gaussL.h5"))
   println("Large computed")
-//  val gpmmModelM = gpmmHelp.GaussianMixture(Seq(GaussianKernelParameters(maxDist/8, maxDist/16))).truncate(100)
-//  StatisticalModelIO.writeStatisticalTriangleMeshModel3D(gpmmModelM, new File("data/armadillo/models/gaussM.h5"))
-//  println("Medium computed")
-//  val gpmmModelS = gpmmHelp.GaussianMixture(Seq(GaussianKernelParameters(maxDist/16, maxDist/32))).truncate(100)
-//  StatisticalModelIO.writeStatisticalTriangleMeshModel3D(gpmmModelS, new File("data/armadillo/models/gaussS.h5"))
-//  println("Small computed")
-//  val gpmmModelMix = gpmmHelp.AutomaticGaussian().truncate(100)
-//  StatisticalModelIO.writeStatisticalTriangleMeshModel3D(gpmmModelMix, new File("data/armadillo/models/gaussMix.h5"))
-//  println("Mix computed")
-  val gpmmModelInvLap = GPMMTriangleMesh3D(reference, relativeTolerance = 0.0).InverseLaplacian(50.0).truncate(1000)
-  StatisticalModelIO.writeStatisticalTriangleMeshModel3D(gpmmModelInvLap, new File("data/armadillo/models/invLap_high.h5"))
+  val gpmmModelM = gpmmHelp.GaussianMixture(Seq(GaussianKernelParameters(maxDist/8, maxDist/16))).truncate(1000)
+  StatisticalModelIO.writeStatisticalTriangleMeshModel3D(gpmmModelM, new File("data/armadillo/karatemodels/gaussM.h5"))
+  println("Medium computed")
+  val gpmmModelS = gpmmHelp.GaussianMixture(Seq(GaussianKernelParameters(maxDist/16, maxDist/32))).truncate(1000)
+  StatisticalModelIO.writeStatisticalTriangleMeshModel3D(gpmmModelS, new File("data/armadillo/karatemodels/gaussS.h5"))
+  println("Small computed")
+  val gpmmModelMix = gpmmHelp.AutomaticGaussian().truncate(100)
+  StatisticalModelIO.writeStatisticalTriangleMeshModel3D(gpmmModelMix, new File("data/armadillo/karatemodels/gaussMix.h5"))
+  println("Mix computed")
+  val gpmmModelInvLap = GPMMTriangleMesh3D(karateReference, relativeTolerance = 0.0).InverseLaplacian(50.0).truncate(1000)
+  StatisticalModelIO.writeStatisticalTriangleMeshModel3D(gpmmModelInvLap, new File("data/armadillo/karatemodels/invLap.h5"))
   println("inv lap")
-//  val gpmmModelInvLapDot = GPMMTriangleMesh3D(reference, relativeTolerance = 0.0).InverseLaplacianDot(0.05, 1.0).truncate(100)
-//  StatisticalModelIO.writeStatisticalTriangleMeshModel3D(gpmmModelInvLapDot, new File("data/armadillo/models/invLapDot.h5"))
-//  println("inv lap dot")
-//  val gpmmModelLsymm = GPMMTriangleMesh3D(reference, relativeTolerance = 0.0).GaussianSymmetry(maxDist/4, maxDist/8).truncate(100)
-//  StatisticalModelIO.writeStatisticalTriangleMeshModel3D(gpmmModelLsymm, new File("data/armadillo/models/gaussLsymm.h5"))
+  val gpmmModelInvLapDot = GPMMTriangleMesh3D(karateReference, relativeTolerance = 0.0).InverseLaplacianDot(0.05, 1.0).truncate(1000)
+  StatisticalModelIO.writeStatisticalTriangleMeshModel3D(gpmmModelInvLapDot, new File("data/armadillo/karatemodels/invLapDot.h5"))
+  println("inv lap dot")
+  val gpmmModelLsymm = GPMMTriangleMesh3D(karateReference, relativeTolerance = 0.0).GaussianSymmetry(maxDist/4, maxDist/8).truncate(1000)
+  StatisticalModelIO.writeStatisticalTriangleMeshModel3D(gpmmModelLsymm, new File("data/armadillo/karatemodels/gaussLsymm.h5"))
 //  println("gauss mirror")
 //  val path = new File("data/armadillo/models")
 //  val gpmmModel = StatisticalModelIO.readStatisticalTriangleMeshModel3D(new File(path, "paper/mirror.h5")).get.transform(transform)

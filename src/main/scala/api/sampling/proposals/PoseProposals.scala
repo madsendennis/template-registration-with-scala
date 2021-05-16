@@ -80,41 +80,43 @@ case class StandardRandomPoseProposal(scaleFactor: Double) (implicit random: Ran
     val yawProposalC = GaussianAxisRotationProposal(0.05 * scaleFactor, YawAxis, generatedBy = "RotationYaw-0.05")
     val yawProposalI = GaussianAxisRotationProposal(0.01 * scaleFactor, YawAxis, generatedBy = "RotationYaw-0.01")
     val yawProposalF = GaussianAxisRotationProposal(0.005 * scaleFactor, YawAxis, generatedBy = "RotationYaw-0.005")
-    val rotationYaw = MixtureProposal(0.0 *: yawProposalC + 0.4 *: yawProposalI + 0.5 *: yawProposalF)
+    val rotationYaw = MixtureProposal(0.0 *: yawProposalC + 0.1 *: yawProposalI + 0.5 *: yawProposalF)
 
     val pitchProposalC = GaussianAxisRotationProposal(0.05 * scaleFactor, PitchAxis, generatedBy = "RotationPitch-0.05")
     val pitchProposalI = GaussianAxisRotationProposal(0.01 * scaleFactor, PitchAxis, generatedBy = "RotationPitch-0.01")
     val pitchProposalF = GaussianAxisRotationProposal(0.001 * scaleFactor, PitchAxis, generatedBy = "RotationPitch-0.001")
-    val rotationPitch = MixtureProposal(0.0 *: pitchProposalC + 0.4 *: pitchProposalI + 0.5 *: pitchProposalF)
+    val rotationPitch = MixtureProposal(0.0 *: pitchProposalC + 0.1 *: pitchProposalI + 0.5 *: pitchProposalF)
 
     val rollProposalC = GaussianAxisRotationProposal(0.2 * scaleFactor, RollAxis, generatedBy = "RotationRoll-0.2")
-    val rollProposalI = GaussianAxisRotationProposal(0.1 * scaleFactor, RollAxis, generatedBy = "RotationRoll-0.1")
-    val rollProposalF = GaussianAxisRotationProposal(0.01 * scaleFactor, RollAxis, generatedBy = "RotationRoll-0.01")
-    val rotationRoll = MixtureProposal(0.1 *: rollProposalC + 0.4 *: rollProposalI + 0.5 *: rollProposalF)
+    val rollProposalI = GaussianAxisRotationProposal(0.01 * scaleFactor, RollAxis, generatedBy = "RotationRoll-0.1")
+    val rollProposalF = GaussianAxisRotationProposal(0.001 * scaleFactor, RollAxis, generatedBy = "RotationRoll-0.01")
+    val rotationRoll = MixtureProposal(0.0 *: rollProposalC + 0.1 *: rollProposalI + 0.5 *: rollProposalF)
 
 
-    val rotationProposal = MixtureProposal(0.5 *: rotationRoll + 0.2 *: rotationPitch + 0.2 *: rotationYaw)
+    val rotationProposal = MixtureProposal(0.0 *: rotationRoll + 0.0 *: rotationPitch + 0.5 *: rotationYaw)
 
 
     val translationXProposalC = GaussianAxisTranslationProposal(10.0 * scaleFactor, 0, generatedBy = "TranslationX-10.0")
     val translationXProposalI = GaussianAxisTranslationProposal(3.0 * scaleFactor, 0, generatedBy = "TranslationX-3.0")
     val translationXProposalF = GaussianAxisTranslationProposal(1.0 * scaleFactor, 0, generatedBy = "TranslationX-1.0")
-    val translationXProposal = MixtureProposal(0.0 *: translationXProposalC + 0.4 *: translationXProposalI + 0.5 *: translationXProposalF)
+    val translationXProposal = MixtureProposal(0.0 *: translationXProposalC + 0.4 *: translationXProposalI + 0.4 *: translationXProposalF)
 
 
     val translationYProposalC = GaussianAxisTranslationProposal(10.0 * scaleFactor, 1, generatedBy = "TranslationY-10.0")
     val translationYProposalI = GaussianAxisTranslationProposal(3.0 * scaleFactor, 1, generatedBy = "TranslationY-3.0")
     val translationYProposalF = GaussianAxisTranslationProposal(1.0 * scaleFactor, 1, generatedBy = "TranslationY-1.0")
-    val translationYProposal = MixtureProposal(0.0 *: translationYProposalC + 0.4 *: translationYProposalI + 0.5 *: translationYProposalF)
+    val translationYProposal = MixtureProposal(0.0 *: translationYProposalC + 0.4 *: translationYProposalI + 0.4 *: translationYProposalF)
 
 
     val translationZProposalC = GaussianAxisTranslationProposal(10.0 * scaleFactor, 2, generatedBy = "TranslationZ-10.0")
     val translationZProposalI = GaussianAxisTranslationProposal(3.0 * scaleFactor, 2, generatedBy = "TranslationZ-3.0")
     val translationZProposalF = GaussianAxisTranslationProposal(1.0 * scaleFactor, 2, generatedBy = "TranslationZ-1.0")
-    val translationZProposal = MixtureProposal(0.0 *: translationZProposalC + 0.4 *: translationZProposalI + 0.5 *: translationZProposalF)
+    val translationZProposal = MixtureProposal(0.0 *: translationZProposalC + 0.4 *: translationZProposalI + 0.4 *: translationZProposalF)
 
     val translationProposal = MixtureProposal(0.3 *: translationXProposal + 0.3 *: translationYProposal + 0.4 *: translationZProposal)
     val poseProposal = MixtureProposal(0.4 *: rotationProposal + 0.4 *: translationProposal)
+//    val poseProposal = MixtureProposal(0.0 *: rotationProposal + 0.4 *: translationProposal)
+
 
     poseProposal
   }

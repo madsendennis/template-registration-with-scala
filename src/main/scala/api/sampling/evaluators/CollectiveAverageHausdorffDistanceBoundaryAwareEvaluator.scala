@@ -34,23 +34,28 @@ case class CollectiveAverageHausdorffDistanceBoundaryAwareEvaluator(model: Stati
                                                                     numberOfPointsForComparison: Int)(implicit random: Random)
   extends DistributionEvaluator[ModelFittingParameters] with EvaluationCaching {
 
+  val decModel = model.decimate(numberOfPointsForComparison)
+  val decTarget = targetMesh.operations.decimate(numberOfPointsForComparison)
+
   def getRandomPointIdsOnModel: IndexedSeq[PointId] = {
-    if (numberOfPointsForComparison >= model.referenceMesh.pointSet.numberOfPoints) {
-      model.referenceMesh.pointSet.pointIds.toIndexedSeq
-    }
-    else {
-      UniformMeshSampler3D(model.referenceMesh, numberOfPointsForComparison).sample().map(_._1)
-        .map(p => model.referenceMesh.pointSet.findClosestPoint(p).id)
-    }
+//    if (numberOfPointsForComparison >= model.referenceMesh.pointSet.numberOfPoints) {
+//      model.referenceMesh.pointSet.pointIds.toIndexedSeq
+//    }
+//    else {
+//      UniformMeshSampler3D(model.referenceMesh, numberOfPointsForComparison).sample().map(_._1)
+//        .map(p => model.referenceMesh.pointSet.findClosestPoint(p).id)
+//    }
+    decModel.referenceMesh.pointSet.pointIds.toIndexedSeq
   }
 
   def getRandomPointsOnTarget: IndexedSeq[Point[_3D]] = {
-    if (numberOfPointsForComparison >= targetMesh.pointSet.numberOfPoints) {
-      targetMesh.pointSet.points.toIndexedSeq
-    }
-    else {
-      UniformMeshSampler3D(targetMesh, numberOfPointsForComparison).sample().map(_._1)
-    }
+//    if (numberOfPointsForComparison >= targetMesh.pointSet.numberOfPoints) {
+//      targetMesh.pointSet.points.toIndexedSeq
+//    }
+//    else {
+//      UniformMeshSampler3D(targetMesh, numberOfPointsForComparison).sample().map(_._1)
+//    }
+    decTarget.pointSet.points.toIndexedSeq
   }
 
   def hausdorffDistance(m1: TriangleMesh[_3D], m2: TriangleMesh[_3D]): Double = {
@@ -88,7 +93,7 @@ case class CollectiveAverageHausdorffDistanceBoundaryAwareEvaluator(model: Stati
     val dists = for (p <- randomPointsOnTarget) yield {
       val pSample = modelSample.operations.closestPointOnSurface(p).point
       val pTargetId = modelSample.pointSet.findClosestPoint(pSample).id
-      if (targetMesh.operations.pointIsOnBoundary(pTargetId)) -1.0
+      if (modelSample.operations.pointIsOnBoundary(pTargetId)) -1.0
       else (pSample - p).norm
     }
     val filteredDists = dists.toIndexedSeq.filter(f => f > -1.0)
@@ -106,6 +111,6 @@ case class CollectiveAverageHausdorffDistanceBoundaryAwareEvaluator(model: Stati
         (0.5 * m2t._1 + 0.5 * t2m._1, math.max(m2t._2, t2m._2))
       }
     }
-    likelihoodModelAvg.logPdf(dist._1) + likelihoodModelMax.logPdf(dist._2)
+    likelihoodModelAvg.logPdf(dist._1) //+ likelihoodModelMax.logPdf(dist._2)
   }
 }

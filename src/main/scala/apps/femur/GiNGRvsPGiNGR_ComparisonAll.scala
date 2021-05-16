@@ -85,12 +85,12 @@ object GiNGRvsPGiNGR_ComparisonAll {
     println("Running GiNGR vs P-GiNGR with ICP and CPD")
 
     val normalNoise = 5.0
-    val numOfSamples = 200
+    val numOfSamples = 100
     val numOfIterations = 100
-    val numOfEvalPoints = 500 // Used for the likelihood evaluator
+    val numOfEvalPoints = 400 // Used for the likelihood evaluator
     val numOfDecimatedPoints = 100 // Used for the ICP proposal
 
-    val logPath = new File(dataFemurPath, "log/thesis_base_50_experiment/")
+    val logPath = new File(dataFemurPath, "log/thesis_small_50_experiment/")
     logPath.mkdir()
 
     val modelFile = new File(dataFemurPath, "femur_gp_model_50-components.h5")
@@ -99,14 +99,16 @@ object GiNGRvsPGiNGR_ComparisonAll {
 
     val subPath = "aligned"
 
-    val targetMeshes = new File(generalPath, s"$subPath/meshes/").listFiles().filter(f => f.getName.endsWith(".stl")).sorted
+    val targetMeshesInit = new File(generalPath, s"$subPath/meshes/").listFiles().filter(f => f.getName.endsWith(".stl")).sorted
 
     val experimentFile = new File(logPath, "experiments.json")
     val experimentLogger: GiNGRExperimentLogger = GiNGRExperimentLogger(experimentFile, modelFile.toString)
 
     println(s"Experiment file: ${experimentFile}")
 
-
+//    val doneList = Seq(2,3,5,6,7,8,9,11,12,14,18,19,20,21,22,25,29,37,39,41,43,48,49).map(_.toString+".stl")
+    val targetMeshes =  targetMeshesInit //.filter(f => !doneList.contains(f.getName))
+    println(s"Number of targets: ${targetMeshes.length}")
     println("Target names:")
     targetMeshes.foreach(println(_))
 

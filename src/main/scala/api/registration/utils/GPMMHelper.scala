@@ -9,7 +9,7 @@ import scalismo.kernels.{DiagonalKernel, GaussianKernel, MatrixValuedPDKernel}
 import scalismo.mesh.TriangleMesh
 import scalismo.numerics.PivotedCholesky
 import scalismo.numerics.PivotedCholesky.NumberOfEigenfunctions
-import scalismo.statisticalmodel.{GaussianProcess, LowRankGaussianProcess, PointDistributionModel}
+import scalismo.statisticalmodel.{DiscreteLowRankGaussianProcess, GaussianProcess, LowRankGaussianProcess, PointDistributionModel}
 
 trait GPMM[D, DDomain[D] <: DiscreteDomain[D]] {
   def construct(reference: DDomain[D], kernel: MatrixValuedPDKernel[D], relativeTolerance: Double = 0.01): PointDistributionModel[D, DDomain]
@@ -136,4 +136,5 @@ case class GPMMTriangleMesh3D(reference: TriangleMesh[_3D], relativeTolerance: D
     }.toArray
     ScalarMeshField[Double](model.reference, dist)
   }
+
 }

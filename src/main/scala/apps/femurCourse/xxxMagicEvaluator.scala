@@ -2,7 +2,7 @@ package apps.femurCourse
 
 import java.io.File
 
-import apps.util.FileUtils
+import apps.util.{FileUtils, RegistrationComparison}
 import scalismo.common.PointWithId
 import scalismo.geometry.{Point, _3D}
 import scalismo.io.MeshIO
@@ -24,10 +24,25 @@ object xxxMagicEvaluator extends App{
     println(s"${res._1}, avg: ${res._2.avgDistance}, haus: ${res._2.hausdorffDistance}")
     res
   }
+
   val avgDist = res.map(f => f._2.avgDistance).sum/res.length.toDouble
   val hausDist = res.map(f => f._2.hausdorffDistance).sum/res.length.toDouble
 
   println(s"Total - avg: ${avgDist}, haus: ${hausDist}")
+
+
+  val res2 = completedPath.map{f =>
+    val reconstruction = MeshIO.readMesh(completedPath.find(_.getName.equals(f.getName)).get).get
+    val groundTruthPartialBone = MeshIO.readMesh(targetPath.find(_.getName.equals(f.getName)).get).get
+    val measures = RegistrationComparison.evaluateReconstruction2GroundTruth(f.getName, groundTruthPartialBone, reconstruction)
+    println(s"${f.getName}, avg: ${measures._1}, max: ${measures._2}")
+    measures
+  }
+
+  val avgDistPart = res2.map(f => f._1).sum/res.length.toDouble
+  val hausDistPart = res2.map(f => f._2).sum/res.length.toDouble
+
+  println(s"Total - avg: ${avgDistPart}, haus: ${hausDistPart}")
 
   def evaluate(id: String): (String, MeshDistances) = {
         val reconstruction = MeshIO.readMesh(completedPath.find(_.getName.equals(id)).get).get

@@ -3,98 +3,59 @@ package apps.femurCourse
 import java.awt.Color
 import java.io.File
 
-import api.other.{RegistrationComparison, TargetSampling}
-import api.registration.utils.modelViewer
-import api.sampling.evaluators.TargetToModelEvaluation
-import api.sampling.{MixedProposalDistributions, ModelFittingParameters, ProductEvaluators, SamplingRegistration}
-import apps.util.{AlignmentTransforms, FileUtils}
-import scalismo.geometry.{Point3D, _3D}
-import scalismo.io.{LandmarkIO, MeshIO, StatisticalModelIO}
-import scalismo.mesh.{TriangleMesh, TriangleMesh3D}
-import scalismo.sampling.DistributionEvaluator
-import scalismo.sampling.proposals.MixtureProposal
-import scalismo.sampling.proposals.MixtureProposal.ProposalGeneratorWithTransition
-import scalismo.statisticalmodel.StatisticalMeshModel
-import scalismo.ui.api.{ScalismoUI, ScalismoUIHeadless, StatisticalMeshModelViewControls}
-import scalismo.utils.Random.implicits.randomGenerator
+import api.sampling.ModelFittingParameters
+import api.sampling.loggers.{JSONAcceptRejectLogger, jsonLogFormat}
+import apps.util.{FileUtils, LogHelper, PosteriorVariability, RegistrationComparison}
+import scalismo.io.{MeshIO, StatisticalModelIO}
+import scalismo.ui.api.ScalismoUI
 
 object step10_visualizePreg extends App {
-//  scalismo.initialize()
-//
-//  val logPath = new File(data.data, "log")
-//  logPath.mkdirs()
-//
-//  val completedPath = new File(data.completed, "preg_pca")
-//  completedPath.mkdirs()
-//
-//  //  val modelInit = StatisticalModelIO.readStatisticalTriangleMeshModel3D(data.pca).get
-//  val modelInit = StatisticalModelIO.readStatisticalMeshModel(data.pca).get
-//
-//  val modelLmsInit = LandmarkIO.readLandmarksJson3D(data.referenceLms).get
-//
-//  val targetFiles = data.step3.listFiles(f => f.getName.endsWith(".stl")).sorted
-//
-//  //    val targetFile = targetFiles(1) //.find(f => f.getName.equals("VSD.case_2.101148.stl")).get
-//  targetFiles.par.foreach { targetFile =>
-//
-//    println(s"Processing: ${targetFile}")
-//    val baseName = FileUtils.basename(targetFile)
-//    val target = MeshIO.readMesh(targetFile).get
-//    val targetLms = LandmarkIO.readLandmarksJson3D(new File(targetFile.getParent, baseName + ".json")).get
-//
-//    println(s"Target points: ${target.pointSet.numberOfPoints}")
-//    val transform = AlignmentTransforms.computeTransform(modelLmsInit, targetLms, Point3D(0, 0, 0))
-//    val gpmm = modelInit.transform(transform)
-//    val modelLms = modelLmsInit.map(_.transform(transform))
-//
-//    //    val commonLmNamesInit = modelLms.map(_.id) intersect targetLms.map(_.id)
-//    //    val commonLmNames = commonLmNamesInit.filter(f => !f.toLowerCase.contains("shaft"))
-//    //    val trainingData = commonLmNames.map(name => (gpmm.mean.pointSet.findClosestPoint(modelLms.find(_.id == name).get.point).id, targetLms.find(_.id == name).get.point)).toIndexedSeq
-//    //    val gpmmPos = gpmm.posterior(trainingData, 100.0)
-//
-//    val ui: ScalismoUIHeadless = ScalismoUIHeadless()
-//    //    val ui: ScalismoUI = ScalismoUI()
-//    val modelGroup = ui.createGroup("gpmm")
-//    val targetGroup = ui.createGroup("target")
-//    val gpmmView = ui.show(modelGroup, gpmm, "model")
-//    val showTarget = ui.show(targetGroup, target, targetFile.getName)
-//    showTarget.color = Color.YELLOW
-//    //    ui.show(targetGroup, targetLms, "lms")
-//    //    ui.show(modelGroup, modelLms, "lms")
-//
-//    val mv = if (ui.isInstanceOf[ScalismoUI]) Option(modelViewer(gpmmView.shapeModelTransformationView, 10)) else None
-//
-//    val numOfSamples = 10000 // Length of Markov Chain
-//    val samplePointsModel = 5000
-//    val samplePointsTarget = 1000
-//    val decTarget = target.operations.decimate(samplePointsTarget)
-//    val decGPMM = gpmm.decimate(samplePointsModel)
-//    val proposalCP = MixedProposalDistributions.mixedProposalICP(decGPMM, decTarget, Seq(), Seq(), samplePointsTarget, projectionDirection = TargetSampling, tangentialNoise = 100.0, noiseAlongNormal = 5.0, stepLength = 0.5)
-//    val proposalPose = MixedProposalDistributions.randomPoseProposal(1.0)
-//
-//    //    val proposal = proposalCP
-//    val proposal = MixtureProposal.fromProposalsWithTransition(Seq((0.5, proposalCP), (0.5, proposalPose)): _ *)
-//
-//    val evaluator = ProductEvaluators.proximityAndIndependent(decGPMM, decTarget, evaluationMode = TargetToModelEvaluation, uncertainty = 2.0, numberOfEvaluationPoints = samplePointsTarget)
-//
-//
-//    def fitting(model: StatisticalMeshModel, targetMesh: TriangleMesh3D, evaluator: Map[String, DistributionEvaluator[ModelFittingParameters]], proposal: ProposalGeneratorWithTransition[ModelFittingParameters], numOfIterations: Int, showModel: Option[StatisticalMeshModelViewControls], log: File, initialParameters: Option[ModelFittingParameters] = None): TriangleMesh[_3D] = {
-//
-//      val samplingRegistration = new SamplingRegistration(model, targetMesh, showModel, modelUiUpdateInterval = 10, acceptInfoPrintInterval = 100)
-//      val t0 = System.currentTimeMillis()
-//
-//      val best = samplingRegistration.runfitting(evaluator, proposal, numOfIterations, initialModelParameters = initialParameters, jsonName = log)
-//
-//      val t1 = System.currentTimeMillis()
-//      println(s"ICP-Timing: ${(t1 - t0) / 1000.0} sec")
-//      ModelFittingParameters.transformedMesh(model, best)
-//    }
-//
-//    StatisticalModelIO.writeStatisticalMeshModel(gpmm, new File(logPath, s"${baseName}.h5"))
-//    val bestRegistration = fitting(decGPMM, decTarget, evaluator, proposal, numOfSamples, Option(gpmmView), new File(logPath, s"${baseName}.json"))
-//
-//    RegistrationComparison.evaluateReconstruction2GroundTruth(baseName, target, bestRegistration)
-//
-//    MeshIO.writeMesh(bestRegistration, new File(completedPath, targetFile.getName))
-//  }
+  scalismo.initialize()
+
+  val logPath = new File(data.data, "finalLogs")
+  val completedPath = new File(data.completed, "myBest")
+  val targetPath = data.step3.listFiles(_.getName.endsWith(".stl"))
+
+  val bestColorPath = new File(completedPath, "color")
+  bestColorPath.mkdirs()
+
+
+  val logFiles = logPath.listFiles(f => f.getName.endsWith(".json")).sorted
+
+  //  val logFile = logFiles(0) //.find(f => f.getName.equals("VSD.case_2.101148.stl")).get
+  logFiles.foreach { logFile =>
+
+    println(s"Processing: ${logFile}")
+    val baseName = FileUtils.basename(logFile)
+
+    val target = MeshIO.readMesh(targetPath.find(_.getName.endsWith(s"${baseName}.stl")).get).get
+    val best = MeshIO.readMesh(completedPath.listFiles().find(_.getName.endsWith(s"${baseName}.stl")).get).get
+    val model = StatisticalModelIO.readStatisticalMeshModel(logPath.listFiles().find(_.getName.endsWith(s"${baseName}.h5")).get).get
+    val logObj = new JSONAcceptRejectLogger[ModelFittingParameters](logFile)
+    val logInit: IndexedSeq[jsonLogFormat] = logObj.loadLog()
+    println(s"Log length: ${logInit.length}")
+    val burnInPhase = 200
+
+    val logSamples = LogHelper.samplesFromLog(logInit, takeEveryN = 50, total = 10000, burnInPhase)
+    println(s"Number of samples from log: ${logSamples.length}/${logInit.length - burnInPhase}")
+    val logShapes = LogHelper.logSamples2shapes(model, logSamples.map(_._1))
+
+    val colorMap_normalVariance = PosteriorVariability.computeDistanceMapFromMeshesNormal(logShapes, best, sumNormals = true)
+    val colorMap_posteriorEstimate = PosteriorVariability.computeDistanceMapFromMeshesTotal(logShapes, best)
+
+    val ui: ScalismoUI = ScalismoUI()
+    val targetGroup = ui.createGroup("target")
+    val completeGroup = ui.createGroup("complete")
+
+    val showTarget = ui.show(targetGroup, target, baseName)
+    showTarget.color = Color.RED
+    val showComplete = ui.show(completeGroup, best, "best")
+    ui.show(completeGroup, colorMap_posteriorEstimate, "posterior")
+    ui.show(completeGroup, colorMap_normalVariance, "normal")
+
+    MeshIO.writeScalarMeshField(colorMap_posteriorEstimate, new File(bestColorPath, s"${baseName}_pos.vtk"))
+    MeshIO.writeScalarMeshField(colorMap_normalVariance, new File(bestColorPath, s"${baseName}_normal.vtk"))
+
+    RegistrationComparison.evaluateReconstruction2GroundTruth(baseName, target, best)
+  }
 }

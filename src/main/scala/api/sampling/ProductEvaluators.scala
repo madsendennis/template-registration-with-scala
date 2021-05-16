@@ -54,6 +54,25 @@ object ProductEvaluators {
     evaluatorMap
   }
 
+  def proximityAndIndependentBoundary(model: StatisticalMeshModel, target: TriangleMesh3D, evaluationMode: EvaluationMode, uncertainty: Double = 1.0, numberOfEvaluationPoints: Int = 100, boundaryAware: Boolean = false): Map[String, DistributionEvaluator[ModelFittingParameters]] = {
+    val likelihoodIndependent = breeze.stats.distributions.Gaussian(0, uncertainty)
+
+    val indepPointEval = IndependentPointDistanceEvaluatorBoundary(model, target, likelihoodIndependent, evaluationMode, numberOfEvaluationPoints, boundaryAware = boundaryAware)
+    val evalProximity = ModelPriorEvaluator(model)
+
+    val evaluator = ProductEvaluator(
+      evalProximity,
+      indepPointEval
+    )
+
+    val evaluatorMap: Map[String, DistributionEvaluator[ModelFittingParameters]] = Map(
+      "product" -> evaluator,
+      "prior" -> evalProximity,
+      "distance" -> indepPointEval
+    )
+    evaluatorMap
+  }
+
   def proximityAndHausdorff(model: StatisticalMeshModel, target: TriangleMesh3D, uncertainty: Double = 1.0): Map[String, DistributionEvaluator[ModelFittingParameters]] = {
     val likelihoodIndependent = breeze.stats.distributions.Exponential(uncertainty)
 
