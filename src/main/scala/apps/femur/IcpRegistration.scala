@@ -27,7 +27,7 @@ import scalismo.ui.api.{ScalismoUI, StatisticalMeshModelViewControls}
 
 object IcpRegistration {
 
-  def fitting(model: StatisticalMeshModel, targetMesh: TriangleMesh3D, numOfSamplePoints: Int, numOfIterations: Int, showModel: Option[StatisticalMeshModelViewControls], initialParameters: Option[ModelFittingParameters] = None): ModelFittingParameters = {
+  def fitting(model: StatisticalMeshModel, targetMesh: TriangleMesh3D, numOfSamplePoints: Int, numOfIterations: Int, showModel: Option[StatisticalMeshModelViewControls], initialParameters: Option[ModelFittingParameters] = None, iterationSeq: Seq[Double] = Seq(1e-15)): ModelFittingParameters = {
 
     val initPars =
       if (initialParameters.isDefined) {
@@ -36,11 +36,11 @@ object IcpRegistration {
       else {
         None
       }
-
-    val icpFitting = IcpBasedSurfaceFitting(model, targetMesh, numOfSamplePoints, projectionDirection = ModelSampling, showModel = showModel)
+    val icpFitting = IcpBasedSurfaceFitting(model, targetMesh, numOfSamplePoints, projectionDirection = TargetSampling, showModel = showModel)
+//    val icpFitting = IcpBasedSurfaceFitting(model, targetMesh, numOfSamplePoints, projectionDirection = ModelAndTargetSampling, showModel = showModel)
     val t0 = System.currentTimeMillis()
 
-    val bestPars = icpFitting.runfitting(numOfIterations, iterationSeq = Seq(1e-15), initialModelParameters = initPars)
+    val bestPars = icpFitting.runfitting(numOfIterations, iterationSeq = iterationSeq, initialModelParameters = initPars)
     val t1 = System.currentTimeMillis()
     println(s"ICP-Timing: ${(t1 - t0) / 1000.0} sec")
     val pars = initialParameters.getOrElse(ModelFittingParameters.zeroInitialization(model))

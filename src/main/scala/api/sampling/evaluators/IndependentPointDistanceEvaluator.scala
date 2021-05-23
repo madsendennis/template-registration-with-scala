@@ -33,28 +33,12 @@ case class IndependentPointDistanceEvaluator(model: StatisticalMeshModel,
                                              numberOfPointsForComparison: Int)
   extends DistributionEvaluator[ModelFittingParameters] with EvaluationCaching {
 
-  def getRandomPointsOnTarget: IndexedSeq[Point[_3D]] = {
-    if (numberOfPointsForComparison >= targetMesh.pointSet.numberOfPoints) {
-      targetMesh.pointSet.points.toIndexedSeq
-    }
-    else {
-      UniformMeshSampler3D(targetMesh, numberOfPointsForComparison).sample().map(_._1)
-    }
-  }
-
-  def getRandomPointIdsOnModel: IndexedSeq[PointId] = {
-    if (numberOfPointsForComparison >= model.referenceMesh.pointSet.numberOfPoints) {
-      model.referenceMesh.pointSet.pointIds.toIndexedSeq
-    }
-    else {
-      UniformMeshSampler3D(model.referenceMesh, numberOfPointsForComparison).sample().map(_._1)
-        .map(p => model.referenceMesh.pointSet.findClosestPoint(p).id)
-    }
-  }
+  private val modelDec = model.decimate(numberOfPointsForComparison)
+  private val targetDec = targetMesh.operations.decimate(numberOfPointsForComparison)
 
   // Make sure not to oversample if the numberOfPointsForComparison is set higher than the points in the target or the model
-  private val randomPointsOnTarget: IndexedSeq[Point[_3D]] = getRandomPointsOnTarget
-  private val randomPointIdsOnModel: IndexedSeq[PointId] = getRandomPointIdsOnModel
+  private val randomPointsOnTarget: IndexedSeq[Point[_3D]] = targetDec.pointSet.points.toIndexedSeq
+  private val randomPointIdsOnModel: IndexedSeq[PointId] = modelDec.referenceMesh.pointSet.pointIds.toIndexedSeq
 
   def distModelToTarget(modelSample: TriangleMesh3D): Double = {
     val pointsOnSample = randomPointIdsOnModel.map(modelSample.pointSet.point)

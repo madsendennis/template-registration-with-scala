@@ -42,8 +42,8 @@ case class IcpBasedSurfaceFitting(model: StatisticalMeshModel, target: TriangleM
 
   val logger: Logger = Logger("ICP-Logger")
 
-  val noiseAlongNormal = 5.0
-  val tangentialNoise = 100.0
+//  val noiseAlongNormal = 5.0
+//  val tangentialNoise = 100.0
 
   def runfitting(numIterations: Int, iterationSeq: Seq[Double] = defIterations, initialModelParameters: Option[(DenseVector[Double], TranslationAfterRotation[_3D])] = None): DenseVector[Double] = {
 
@@ -68,10 +68,10 @@ case class IcpBasedSurfaceFitting(model: StatisticalMeshModel, target: TriangleM
         val cpInfo = ClosestPointRegistrator.ClosestPointTriangleMesh3D.closestPointCorrespondence(instance, targetDec, direction = TargetToReference)
         val cp = cpInfo._1.filter(_._3 == 1.0).toIndexedSeq
         val corr = cp.map{case(id, p, _) =>
-          val noiseDistribution = SurfaceNoiseHelpers.surfaceNormalDependantNoise(instance.vertexNormals.atPoint(id), noiseAlongNormal, tangentialNoise)
-          (id, p, noiseDistribution)
+//          val noiseDistribution = SurfaceNoiseHelpers.surfaceNormalDependantNoise(instance.vertexNormals.atPoint(id), noiseAlongNormal, tangentialNoise)
+          (id, p)//, noiseDistribution)
         }
-        val posterior = model.posterior(corr)
+        val posterior = model.posterior(corr, sigma)
         val fit = posterior.mean
         model.coefficients(fit)
       }
@@ -80,10 +80,10 @@ case class IcpBasedSurfaceFitting(model: StatisticalMeshModel, target: TriangleM
         val cpInfo = ClosestPointRegistrator.ClosestPointTriangleMesh3D.closestPointCorrespondence(instance, target, direction = ReferenceToTarget)
         val cp = cpInfo._1.filter(_._3 == 1.0).toIndexedSeq
         val corr = cp.map{case(id, p, _) =>
-          val noiseDistribution = SurfaceNoiseHelpers.surfaceNormalDependantNoise(instance.vertexNormals.atPoint(id), noiseAlongNormal, tangentialNoise)
-          (id, p, noiseDistribution)
+//          val noiseDistribution = SurfaceNoiseHelpers.surfaceNormalDependantNoise(instance.vertexNormals.atPoint(id), noiseAlongNormal, tangentialNoise)
+          (id, p)//, noiseDistribution)
         }
-        val posterior = modelDec.posterior(corr)
+        val posterior = modelDec.posterior(corr, sigma)
         val fit = posterior.mean
         modelDec.coefficients(fit)
       }
