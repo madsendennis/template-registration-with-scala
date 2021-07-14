@@ -2,12 +2,13 @@ package api.registration
 
 import api.registration.cpd.CPDFactory
 import api.registration.utils.PointSequenceConverter
+import breeze.linalg.DenseVector
 import scalismo.common.{DiscreteDomain, DiscreteField, DomainWarp, Vectorizer}
 import scalismo.geometry.{NDSpace, Point}
 
 import language.higherKinds
 
-class RigidCPDRegistration[D: NDSpace, DDomain[D] <: DiscreteDomain[D]](
+class RigidCPDRegistration[D: NDSpace, DDomain[A] <: DiscreteDomain[A]](
     template: DDomain[D],
     lambda: Double = 2,
     beta: Double = 2,
@@ -17,15 +18,17 @@ class RigidCPDRegistration[D: NDSpace, DDomain[D] <: DiscreteDomain[D]](
 
   def registrationMethod(targetPoints: Seq[Point[D]]) = cpd.registerRigidly(targetPoints)
 
-  def register(target: DDomain[D]): DDomain[D] = {
+  def register(target: DDomain[D]): (DDomain[D], DenseVector[Double]) = {
     val registrationTask = registrationMethod(target.pointSet.points.toSeq)
-    val registration = registrationTask.Registration(max_iterations)
+    val registrationAll = registrationTask.Registration(max_iterations)
+    val registration = registrationAll._1
+    val P1 = registrationAll._2
     val warpField = DiscreteField(template, template.pointSet.points.toIndexedSeq.zip(registration).map { case (a, b) => b - a })
-    warper.transformWithField(template, warpField)
+    (warper.transformWithField(template, warpField),P1)
   }
 }
 
-class NonRigidCPDRegistration[D: NDSpace, DDomain[D] <: DiscreteDomain[D]](
+class NonRigidCPDRegistration[D: NDSpace, DDomain[A] <: DiscreteDomain[A]](
     template: DDomain[D],
     lambda: Double = 2,
     beta: Double = 2,
@@ -36,7 +39,7 @@ class NonRigidCPDRegistration[D: NDSpace, DDomain[D] <: DiscreteDomain[D]](
   override def registrationMethod(targetPoints: Seq[Point[D]]) = cpd.registerNonRigidly(targetPoints)
 }
 
-class AffineCPDRegistration[D: NDSpace, DDomain[D] <: DiscreteDomain[D]](
+class AffineCPDRegistration[D: NDSpace, DDomain[A] <: DiscreteDomain[A]](
     template: DDomain[D],
     lambda: Double = 2,
     beta: Double = 2,
@@ -46,5 +49,3 @@ class AffineCPDRegistration[D: NDSpace, DDomain[D] <: DiscreteDomain[D]](
 
   override def registrationMethod(targetPoints: Seq[Point[D]]) = cpd.registerAffine(targetPoints)
 }
-
-

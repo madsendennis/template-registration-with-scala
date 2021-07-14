@@ -19,7 +19,7 @@ object NonRigidCPDRegistration extends App {
   val cpd = new NonRigidCPDRegistration(template, lambda = 1, beta = 50, w = 0.0, max_iterations = 100)
 
   val t10 = System.currentTimeMillis()
-  val fit = cpd.register(target)
+  val fit = cpd.register(target)._1
   val t11 = System.currentTimeMillis()
   println(s"Fitting time: ${(t11 - t10) / 1000.0} sec.")
 

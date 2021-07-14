@@ -23,7 +23,7 @@ private[cpd] class NonRigidCPD[D: NDSpace](
     sumDist / (3 * template.length * target.length)
   }
 
-  override def Maximization(X: DenseMatrix[Double], Y: DenseMatrix[Double], P: DenseMatrix[Double], sigma2: Double): (DenseMatrix[Double], Double) = {
+  override def Maximization(X: DenseMatrix[Double], Y: DenseMatrix[Double], P: DenseMatrix[Double], sigma2: Double): (DenseMatrix[Double], Double,DenseVector[Double]) = {
     // Update transform
     val P1: DenseVector[Double] = sum(P, Axis._1)
     val Pt1 = sum(P, Axis._0)
@@ -61,6 +61,6 @@ private[cpd] class NonRigidCPD[D: NDSpace](
 //
 //    val updatedSigma2 = computeSigma2(Xtarget, Ytemp)
 
-    (TY, updatedSigma2)
+    (TY, updatedSigma2,P1)
   }
 }

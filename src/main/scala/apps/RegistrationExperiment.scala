@@ -23,7 +23,7 @@ object RegistrationExperiment extends App {
 
             override def method: String = "rigid_cpd"
 
-            override def result: TriangleMesh[_3D] = register(target.target)
+            override def result: TriangleMesh[_3D] = register(target.target)._1
           }
       },
       new NonRigidCPDRegistration(registrationTask.template) with RegistrationMethod[_3D, TriangleMesh] {
@@ -33,7 +33,7 @@ object RegistrationExperiment extends App {
 
             override def method: String = "nonrigid_cpd"
 
-            override def result: TriangleMesh[_3D] = register(target.target)
+            override def result: TriangleMesh[_3D] = register(target.target)._1
           }
       },
       new AffineCPDRegistration(registrationTask.template) with RegistrationMethod[_3D, TriangleMesh] {
@@ -46,7 +46,7 @@ object RegistrationExperiment extends App {
             override def result: TriangleMesh[_3D] = {
               // Note shows how one would look for landmarks, with an assert it could be required and passed in
               println("Has target landmarks? - " + target.isInstanceOf[RegistrationTarget[_3D, TriangleMesh] with HasLandmarks[_3D]])
-              register(target.target)
+              register(target.target)._1
             }
           }
       }
