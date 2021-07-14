@@ -31,7 +31,7 @@ object NonRigidOptimalStepICPRegistration extends App {
 //  val nicp = new NonRigidOptimalStepICP_A(template, target, templateLms, targetLms)
 
   val t0 = System.currentTimeMillis()
-  val fit = nicp.Registration(10, 0.0000001)
+  val fit = nicp.Registration(10, 0.0000001)._1
   val t1 = System.currentTimeMillis()
   println(s"Fitting time: ${(t1 - t0) / 1000.0} sec.")
 

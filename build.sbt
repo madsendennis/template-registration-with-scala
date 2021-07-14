@@ -10,17 +10,10 @@ scalaVersion  := "2.12.8"
 
 scalacOptions := Seq("-unchecked", "-deprecation", "-encoding", "utf8")
 
-resolvers ++= Seq(
-  Resolver.bintrayRepo("unibas-gravis", "maven"),
-  Resolver.bintrayRepo("cibotech", "public"),
-  Opts.resolver.sonatypeSnapshots
-)
-
-
 libraryDependencies  ++= Seq(
-            "ch.unibas.cs.gravis" % "scalismo-native-all" % "4.0.+",
-            "ch.unibas.cs.gravis" %% "scalismo-ui" % "0.90-RC2",
-            "com.cibo" %% "evilplot" % "0.6.3"
+  "ch.unibas.cs.gravis" % "scalismo-native-all" % "4.0.+",
+  "ch.unibas.cs.gravis" %% "scalismo-ui" % "0.90.0",
+  "io.github.cibotech" %% "evilplot" % "0.8.1"
 )
 
 assemblyJarName in assembly := "scala-fun.jar"

@@ -35,27 +35,29 @@ private[cpd] class RigidCPD[D: NDSpace](
     s / (dim * N * M)
   }
 
-  def Registration(max_iteration: Int, tolerance: Double = 0.001): Seq[Point[D]] = {
+  def Registration(max_iteration: Int, tolerance: Double = 0.001): (Seq[Point[D]],DenseVector[Double]) = {
     val sigmaInit = initializeGaussianKernel(templatePoints, targetPoints)
 
-    val fit = (0 until max_iteration).foldLeft((cpd.template, sigmaInit)) { (it, i) =>
+    val initP1 = DenseVector.zeros[Double](templatePoints.length)
+    val fit = (0 until max_iteration).foldLeft((cpd.template, sigmaInit, initP1)) { (it, i) =>
       val currentSigma2 = it._2
       println(s"CPD, iteration: ${i}, variance: ${currentSigma2}")
       val iter = Iteration(target, it._1, it._2)
       val TY = iter._1
       val newSigma2 = iter._2
+      val P1 = iter._3
       val diff = abs(newSigma2 - currentSigma2)
       if (diff < tolerance) {
         println("Converged")
-        return dataConverter.toPointSequence(TY)(vectorizer)
+        return (dataConverter.toPointSequence(TY)(vectorizer),P1)
       } else {
         iter
       }
     }
-    dataConverter.toPointSequence(fit._1)(vectorizer)
+    (dataConverter.toPointSequence(fit._1)(vectorizer),fit._3)
   }
 
-  def Iteration(X: DenseMatrix[Double], Y: DenseMatrix[Double], sigma2: Double): (DenseMatrix[Double], Double) = {
+  def Iteration(X: DenseMatrix[Double], Y: DenseMatrix[Double], sigma2: Double): (DenseMatrix[Double], Double,DenseVector[Double]) = {
     val P = Expectation(X, Y, sigma2)
     Maximization(X, Y, P, sigma2)
   }
@@ -77,7 +79,7 @@ private[cpd] class RigidCPD[D: NDSpace](
     P /:/ den
   }
 
-  def Maximization(X: DenseMatrix[Double], Y: DenseMatrix[Double], P: DenseMatrix[Double], sigma2: Double): (DenseMatrix[Double], Double) = {
+  def Maximization(X: DenseMatrix[Double], Y: DenseMatrix[Double], P: DenseMatrix[Double], sigma2: Double): (DenseMatrix[Double], Double,DenseVector[Double]) = {
     // Update transform
     val P1: DenseVector[Double] = sum(P, Axis._1)
     val Pt1 = sum(P, Axis._0)
@@ -102,7 +104,7 @@ private[cpd] class RigidCPD[D: NDSpace](
     val updatedSigma2 = 1 / (Np * dim) * (s1 - s2)
     val TY = s * Y * R.t + DenseVector.ones[Double](M) * t.t
 
-    (TY, updatedSigma2)
+    (TY, updatedSigma2,P1)
   }
 
 }
