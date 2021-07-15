@@ -1,10 +1,15 @@
 package api.registration.cpd
 
+import java.io.File
+
 import api.registration.utils.{ClosestPointRegistrator, ModelViewerHelper, PointSequenceConverter, modelViewer}
+import apps.animations.ioStuff.{convertDiscreteFieldToVtkPolyData, writeVTKPdasVTK}
 import breeze.linalg.{Axis, DenseMatrix, DenseVector, sum, tile}
 import scalismo.common.interpolation.NearestNeighborInterpolator
-import scalismo.common.{DiscreteDomain, DomainWarp, PointId, Vectorizer}
+import scalismo.common.{DiscreteDomain, DiscreteField, DiscreteField3D, DomainWarp, PointId, UnstructuredPointsDomain, Vectorizer}
 import scalismo.geometry._
+import scalismo.io.MeshIO
+import scalismo.mesh.{TriangleList, TriangleMesh, TriangleMesh3D}
 import scalismo.statisticalmodel.{MultivariateNormalDistribution, PointDistributionModel}
 
 class NonRigidCPDwithGPMM[D: NDSpace, DDomain[D] <: DiscreteDomain[D]](
@@ -15,7 +20,7 @@ class NonRigidCPDwithGPMM[D: NDSpace, DDomain[D] <: DiscreteDomain[D]](
                                                                      val lambda: Double,
                                                                      val w: Double,
                                                                      val max_iteration: Int,
-                                                                     val modelView: Option[modelViewer]
+                                                                     val modelView: Option[modelViewer],
                                                                    )(
                                                                         implicit val vectorizer: Vectorizer[Point[D]],
                                                                         domainWarper: DomainWarp[D, DDomain],
@@ -31,7 +36,6 @@ class NonRigidCPDwithGPMM[D: NDSpace, DDomain[D] <: DiscreteDomain[D]](
   val lmPointsOnTarget: Seq[Point[D]] = commonLmNames.map(name => targetLMs.find(_.id == name).get).map(lm => targetMesh.pointSet.findClosestPoint(lm.point).point)
 
   val lmCP = lmIdsOnReference.zip(lmPointsOnTarget).map{case(id, p) => (id._1, p, id._2)}
-
 
   def Registration(tolerance: Double, initialGPMMpars: DenseVector[Double], initialSigma2: Double): DenseVector[Double] = {
     val target = targetMesh.pointSet.points.toSeq

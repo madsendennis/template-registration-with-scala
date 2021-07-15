@@ -35,13 +35,13 @@ object CpdRegistration {
     val initPars = initialParameters.getOrElse(ModelFittingParameters.zeroInitialization(model))
 
     val modelConvert = PointDistributionModel[_3D, TriangleMesh](model.referenceMesh, model.gp.interpolate(NearestNeighborInterpolator()))
-    val gpmmCPD = new GpmmCpdRegistration[_3D, TriangleMesh](modelConvert, targetMesh, Seq(), Seq(), lambda = 1, w = 0, max_iterations = numOfIterations, modelView = mv)
-
-    val t0 = System.currentTimeMillis()
-    val bestPars = gpmmCPD.register(tolerance = tolerance, initialGPMM = initPars.shapeParameters.parameters)
-    val t1 = System.currentTimeMillis()
-    println(s"ICP-Timing: ${(t1 - t0) / 1000.0} sec")
-    initPars.copy(shapeParameters = ShapeParameters(bestPars))
+//    val gpmmCPD = new GpmmCpdRegistration[_3D, TriangleMesh](modelConvert, targetMesh, Seq(), Seq(), lambda = 1, w = 0, max_iterations = numOfIterations, modelView = mv)
+//
+//    val t0 = System.currentTimeMillis()
+//    val bestPars = gpmmCPD.register(tolerance = tolerance, initialGPMM = initPars.shapeParameters.parameters)
+//    val t1 = System.currentTimeMillis()
+//    println(s"ICP-Timing: ${(t1 - t0) / 1000.0} sec")
+    initPars.copy()//shapeParameters = ShapeParameters(bestPars))
   }
 
 

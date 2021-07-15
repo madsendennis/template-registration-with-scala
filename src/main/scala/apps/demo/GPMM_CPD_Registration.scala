@@ -45,19 +45,19 @@ object GPMM_CPD_Registration extends App {
 
   println(s"Model rank: ${gpmm.rank} with ${template.pointSet.numberOfPoints} points")
 
-  val cpd = new GpmmCpdRegistration[_3D, TriangleMesh](gpmm, target, Seq(), Seq(), lambda = 1, w = 0.0, max_iterations = 30)
-
-  val t10 = System.currentTimeMillis()
-  val fitPars = cpd.register(tolerance = 0.0000001)
-  val t11 = System.currentTimeMillis()
-  println(s"Fitting time: ${(t11 - t10) / 1000.0} sec.")
-
-  val fit = gpmm.instance(fitPars)
-  println(s"Fit points: ${fit.pointSet.numberOfPoints}, triangles: ${fit.triangles.length}")
-
-  val ui = ScalismoUI()
-  val dataGroup = ui.createGroup("data")
-  ui.show(dataGroup, template, "template").color = Color.RED
-  ui.show(dataGroup, target, "target").color = Color.GREEN
-  ui.show(dataGroup, fit, "fit")
+//  val cpd = new GpmmCpdRegistration[_3D, TriangleMesh](gpmm, target, Seq(), Seq(), lambda = 1, w = 0.0, max_iterations = 30)
+//
+//  val t10 = System.currentTimeMillis()
+//  val fitPars = cpd.register(tolerance = 0.0000001)
+//  val t11 = System.currentTimeMillis()
+//  println(s"Fitting time: ${(t11 - t10) / 1000.0} sec.")
+//
+//  val fit = gpmm.instance(fitPars)
+//  println(s"Fit points: ${fit.pointSet.numberOfPoints}, triangles: ${fit.triangles.length}")
+//
+//  val ui = ScalismoUI()
+//  val dataGroup = ui.createGroup("data")
+//  ui.show(dataGroup, template, "template").color = Color.RED
+//  ui.show(dataGroup, target, "target").color = Color.GREEN
+//  ui.show(dataGroup, fit, "fit")
 }

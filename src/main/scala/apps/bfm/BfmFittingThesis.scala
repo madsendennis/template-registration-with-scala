@@ -124,23 +124,23 @@ object BfmFittingThesis {
         best
       }
 
-      val mv = Option(modelViewer(gpmmView.shapeModelTransformationView, 10))
-
-      val pdm = PointDistributionModel[_3D, TriangleMesh](decGPMM.referenceMesh, decGPMM.gp.interpolate(NearestNeighborInterpolator()))
-      val gpmmCPD = new GpmmCpdRegistration[_3D, TriangleMesh](pdm, targetMeshPartial, modelLms, targetLms, lambda = 1, w = 0, max_iterations = 100, modelView = mv)
-      val cpdFit: DenseVector[Double] = gpmmCPD.register(tolerance = 0.0000001)
-
-      ui.show(finalGroup, model.instance(cpdFit), "cpd")
-
-      val initFitPars = ModelFittingParameters.zeroInitialization(modelInit).copy(shapeParameters = ShapeParameters(cpdFit))
-
-      val bestPars = fitting(decGPMM, decTarget, evaluator, proposal, numOfSamples, Option(gpmmView), targetLogFile, initialParameters = Option(initFitPars))
-
-      val bestRegistration = ModelFittingParameters.transformedMesh(model, bestPars)
-
-      RegistrationComparison.evaluateReconstruction2GroundTruthBoundaryAware(faceIndex.toString, bestRegistration, targetMeshPartial)
-
-      MeshIO.writeMesh(bestRegistration, new File(completedPath, faceIndex.toString + ".ply"))
+//      val mv = Option(modelViewer(gpmmView.shapeModelTransformationView, 10))
+//
+//      val pdm = PointDistributionModel[_3D, TriangleMesh](decGPMM.referenceMesh, decGPMM.gp.interpolate(NearestNeighborInterpolator()))
+//      val gpmmCPD = new GpmmCpdRegistration[_3D, TriangleMesh](pdm, targetMeshPartial, modelLms, targetLms, lambda = 1, w = 0, max_iterations = 100, modelView = mv)
+//      val cpdFit: DenseVector[Double] = gpmmCPD.register(tolerance = 0.0000001)
+//
+//      ui.show(finalGroup, model.instance(cpdFit), "cpd")
+//
+//      val initFitPars = ModelFittingParameters.zeroInitialization(modelInit).copy(shapeParameters = ShapeParameters(cpdFit))
+//
+//      val bestPars = fitting(decGPMM, decTarget, evaluator, proposal, numOfSamples, Option(gpmmView), targetLogFile, initialParameters = Option(initFitPars))
+//
+//      val bestRegistration = ModelFittingParameters.transformedMesh(model, bestPars)
+//
+//      RegistrationComparison.evaluateReconstruction2GroundTruthBoundaryAware(faceIndex.toString, bestRegistration, targetMeshPartial)
+//
+//      MeshIO.writeMesh(bestRegistration, new File(completedPath, faceIndex.toString + ".ply"))
     }
     println("Done now!")
   }

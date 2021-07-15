@@ -64,9 +64,9 @@ object Bunny extends App{
   ui.setVisibility(showMedRes, List(_3DRight))
   ui.setVisibility(showLowRes, List())
 
-  val gpmmRegister2 = new GpmmCpdRegistration[_3D, TriangleMesh](gpmm = downSampleGPMM2, target.operations.decimate(2000), Seq(), Seq(), w=0.0, lambda=1.0, max_iterations = 50, modelView = mv)
-  val fit2 = gpmmRegister2.register(tolerance = 0.000001, initialGPMM = fit1._1, initialSigma2 = fit1._3)
-
-  val gpmmRegister3 = new NonRigidICPwithGPMMTriangle3D(gpmm = gpmm.transform(fit1._2.rigidTransform), target.operations.decimate(10000), modelView = mv)
-  val fit3 = gpmmRegister3.Registration(tolerance = 0.00000001, max_iteration = 5, sigma2 = Seq(0.1, 0.01, 0.001, 0.000001), initialGPMM = fit2)
+//  val gpmmRegister2 = new GpmmCpdRegistration[_3D, TriangleMesh](gpmm = downSampleGPMM2, target.operations.decimate(2000), Seq(), Seq(), w=0.0, lambda=1.0, max_iterations = 50, modelView = mv)
+//  val fit2 = gpmmRegister2.register(tolerance = 0.000001, initialGPMM = fit1._1, initialSigma2 = fit1._3)
+//
+//  val gpmmRegister3 = new NonRigidICPwithGPMMTriangle3D(gpmm = gpmm.transform(fit1._2.rigidTransform), target.operations.decimate(10000), modelView = mv)
+//  val fit3 = gpmmRegister3.Registration(tolerance = 0.00000001, max_iteration = 5, sigma2 = Seq(0.1, 0.01, 0.001, 0.000001), initialGPMM = fit2)
 }

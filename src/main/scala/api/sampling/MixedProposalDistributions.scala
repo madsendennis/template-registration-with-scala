@@ -39,8 +39,8 @@ object MixedProposalDistributions {
       0.5 *: GaussianAxisRotationProposal(0.001, PitchAxis, generatedBy = "RotationPitch") +
       0.5 *: GaussianAxisRotationProposal(0.01, RollAxis, generatedBy = "RotationRoll") +
       0.5 *: GaussianAxisTranslationProposal(1.0, 0, generatedBy = "TranslationX") +
-      0.5 *: GaussianAxisTranslationProposal(1.0, 0, generatedBy = "TranslationY") +
-      0.5 *: GaussianAxisTranslationProposal(1.0, 0, generatedBy = "TranslationZ")
+      0.5 *: GaussianAxisTranslationProposal(1.0, 1, generatedBy = "TranslationY") +
+      0.5 *: GaussianAxisTranslationProposal(1.0, 2, generatedBy = "TranslationZ")
     )
     mixproposal
   }
@@ -51,8 +51,8 @@ object MixedProposalDistributions {
         0.5 *: GaussianAxisRotationProposal(0.005, PitchAxis, generatedBy = "RotationPitch") +
         0.5 *: GaussianAxisRotationProposal(0.005, RollAxis, generatedBy = "RotationRoll") +
         0.5 *: GaussianAxisTranslationProposal(0.1, 0, generatedBy = "TranslationX") +
-        0.5 *: GaussianAxisTranslationProposal(0.1, 0, generatedBy = "TranslationY") +
-        0.5 *: GaussianAxisTranslationProposal(0.1, 0, generatedBy = "TranslationZ")
+        0.5 *: GaussianAxisTranslationProposal(0.1, 1, generatedBy = "TranslationY") +
+        0.5 *: GaussianAxisTranslationProposal(0.1, 2, generatedBy = "TranslationZ")
     )
     mixproposal
   }
@@ -69,14 +69,14 @@ object MixedProposalDistributions {
         0.5 *: GaussianAxisRotationProposal(0.1, PitchAxis, generatedBy = "RotationPitch-.1") +
         0.5 *: GaussianAxisRotationProposal(0.1, RollAxis, generatedBy = "RotationRoll-.1") +
         0.5 *: GaussianAxisTranslationProposal(0.1, 0, generatedBy = "TranslationX-0.1") +
-        0.5 *: GaussianAxisTranslationProposal(0.1, 0, generatedBy = "TranslationY-0.1") +
-        0.5 *: GaussianAxisTranslationProposal(0.1, 0, generatedBy = "TranslationZ-0.1") +
+        0.5 *: GaussianAxisTranslationProposal(0.1, 1, generatedBy = "TranslationY-0.1") +
+        0.5 *: GaussianAxisTranslationProposal(0.1, 2, generatedBy = "TranslationZ-0.1") +
         0.5 *: GaussianAxisTranslationProposal(1.0, 0, generatedBy = "TranslationX-1") +
-        0.5 *: GaussianAxisTranslationProposal(1.0, 0, generatedBy = "TranslationY-1") +
-        0.5 *: GaussianAxisTranslationProposal(1.0, 0, generatedBy = "TranslationZ-1") +
+        0.5 *: GaussianAxisTranslationProposal(1.0, 1, generatedBy = "TranslationY-1") +
+        0.5 *: GaussianAxisTranslationProposal(1.0, 2, generatedBy = "TranslationZ-1") +
         0.5 *: GaussianAxisTranslationProposal(10.0, 0, generatedBy = "TranslationX-10") +
-        0.5 *: GaussianAxisTranslationProposal(10.0, 0, generatedBy = "TranslationY-10") +
-        0.5 *: GaussianAxisTranslationProposal(10.0, 0, generatedBy = "TranslationZ-10")
+        0.5 *: GaussianAxisTranslationProposal(10.0, 1, generatedBy = "TranslationY-10") +
+        0.5 *: GaussianAxisTranslationProposal(10.0, 2, generatedBy = "TranslationZ-10")
     )
     mixproposal
   }

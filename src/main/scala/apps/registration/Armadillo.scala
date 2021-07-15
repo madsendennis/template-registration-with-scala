@@ -47,12 +47,12 @@ object Armadillo extends App{
 ////  val fit = gpmmRegister.register(tolerance = 0.000001, transformationType = RigidTransforms)
 
 //  val gpmmRegister = new GpmmCpdRegistration[_3D, TriangleMesh](gpmm, target, Seq(), Seq(), lambda = 1.0, w = 0.0, max_iterations = 100, modelView = mv)
-  val gpmmRegister = new GpmmCpdRegistration[_3D, TriangleMesh](gpmm, target, modelLMs, targetLMs, lambda = 1.0, w = 0.0, max_iterations = 100, modelView = mv)
+//  val gpmmRegister = new GpmmCpdRegistration[_3D, TriangleMesh](gpmm, target, modelLMs, targetLMs, lambda = 1.0, w = 0.0, max_iterations = 100, modelView = mv)
 
-  println("Sleep 10 sec.")
-  Thread.sleep(10000)
-
-  val fit = gpmmRegister.registerAndWarp(tolerance = 0.00000001)
+//  println("Sleep 10 sec.")
+//  Thread.sleep(10000)
+//
+//  val fit = gpmmRegister.registerAndWarp(tolerance = 0.00000001)
 
 //  val gpmmRegister = new NonRigidICPwithGPMMTriangle3D(gpmm, target, modelView = mv)
 //  val fit = gpmmRegister.Registration(tolerance = 0.000000001, max_iteration = 10, sigma2 = Seq(1000.0, 100.0, 10.0, 1.0, 0.1))

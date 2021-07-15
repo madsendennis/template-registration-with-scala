@@ -1,12 +1,16 @@
 package api.registration.icp
 
+import java.io.File
+
 import api.registration.utils.ClosestPointRegistrator._
 import api.registration.utils.{ClosestPointDirection, ReferenceToTarget, modelViewer}
+import apps.animations.ioStuff.{convertDiscreteFieldToVtkPolyData, writeVTKPdasVTK}
 import breeze.linalg.DenseVector
 import breeze.numerics.{abs, pow}
 import scalismo.common.interpolation.NearestNeighborInterpolator
-import scalismo.common.{DiscreteDomain, DomainWarp, PointId, UnstructuredPointsDomain, Vectorizer}
+import scalismo.common.{DiscreteDomain, DiscreteField, DiscreteField3D, DomainWarp, PointId, UnstructuredPointsDomain, Vectorizer}
 import scalismo.geometry._
+import scalismo.io.MeshIO
 import scalismo.mesh.TriangleMesh
 import scalismo.statisticalmodel.PointDistributionModel
 
@@ -28,6 +32,7 @@ class NonRigidICPwithGPMM[D: NDSpace, DDomain[D] <: DiscreteDomain[D]](
     val fit = sigma2.zipWithIndex.foldLeft(initialGPMM) { (pars, config) =>
       val s = config._1
       val j = config._2
+
       val innerFit = (0 until max_iteration).foldLeft((pars, Double.PositiveInfinity)) { (it, i) =>
         val iter = Iteration(it._1, target, s, direction)
         if (modelView.nonEmpty) {
@@ -69,7 +74,17 @@ class NonRigidICPwithGPMM[D: NDSpace, DDomain[D] <: DiscreteDomain[D]](
 class NonRigidICPwithGPMMTriangle3D(gpmm: PointDistributionModel[_3D, TriangleMesh],
                                     target: TriangleMesh[_3D], modelView: Option[modelViewer]) extends NonRigidICPwithGPMM[_3D, TriangleMesh](gpmm, target, modelView) {
   override def getCorrespondence(template: TriangleMesh[_3D], target: TriangleMesh[_3D], direction: ClosestPointDirection): (Seq[(PointId, Point[_3D], Double)], Double) = {
-    ClosestPointTriangleMesh3D.closestPointCorrespondence(template, target, direction)
+    val corr = ClosestPointTriangleMesh3D.closestPointCorrespondence(template, target, direction)
+//    MeshIO.writeMesh(template, new File(s"data/animations/icpReg/icpReg_${idStuff}.ply"))
+//
+//    val corrFiltered = corr._1 //._1.filter(f => refPointIds.contains(f._1))
+//
+//    val samplePoints = corrFiltered.map(f => template.pointSet.point(f._1)).toIndexedSeq
+//    val mydefs = corrFiltered.zip(samplePoints).map{case(f, p) => f._2-p}.toIndexedSeq
+//    val df: DiscreteField[_3D, UnstructuredPointsDomain, EuclideanVector[_3D]] = DiscreteField3D(UnstructuredPointsDomain(samplePoints), mydefs)
+//    val polyStuff = convertDiscreteFieldToVtkPolyData(df)
+//    writeVTKPdasVTK(polyStuff, new File(s"data/animations/icpRegDeforms2/icpRegDeforms_${idStuff}.vtk"))
+    corr
   }
 }
 
