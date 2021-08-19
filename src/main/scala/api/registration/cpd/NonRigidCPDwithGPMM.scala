@@ -7,6 +7,8 @@ import scalismo.common.{DiscreteDomain, DomainWarp, Vectorizer}
 import scalismo.geometry._
 import scalismo.statisticalmodel.{MultivariateNormalDistribution, PointDistributionModel}
 
+import scala.collection.parallel.ParSeq
+
 class NonRigidCPDwithGPMM[D: NDSpace, DDomain[D] <: DiscreteDomain[D]](
                                                                      val gpmm: PointDistributionModel[D, DDomain],
                                                                      val lambda: Double,
@@ -96,7 +98,7 @@ class NonRigidCPDwithGPMM[D: NDSpace, DDomain[D] <: DiscreteDomain[D]](
       MultivariateNormalDistribution(DenseVector.zeros[Double](D), DenseMatrix.eye[Double](D) * d)
     }
 
-    val deform = template.zipWithIndex.par.map { case (y, i) =>
+    val deform: ParSeq[EuclideanVector[D]] = template.zipWithIndex.par.map { case (y, i) =>
       val xscale = target.zipWithIndex.map { case (x, j) =>
         P1inv(i) * P(i, j) * x.toBreezeVector
       }

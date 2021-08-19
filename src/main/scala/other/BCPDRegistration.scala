@@ -1,7 +1,7 @@
-package api.registration
+package other
 
-import api.registration.cpd.BCPD
 import api.registration.utils.PointSequenceConverter
+import other.cpd.BCPD
 import scalismo.common.{DiscreteDomain, DiscreteField, DomainWarp, Vectorizer}
 import scalismo.geometry.{NDSpace, Point}
 import scalismo.kernels.PDKernel

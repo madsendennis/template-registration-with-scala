@@ -1,4 +1,4 @@
-package api.registration.icp
+package other.icp
 
 import api.registration.utils.Registrator
 import breeze.numerics.abs

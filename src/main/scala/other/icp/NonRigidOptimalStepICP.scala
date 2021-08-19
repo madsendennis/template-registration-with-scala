@@ -1,4 +1,4 @@
-package api.registration.icp
+package other.icp
 
 import api.registration.utils.{CSCHelper, NonRigidClosestPointRegistrator, PointSequenceConverter}
 import breeze.linalg.{CSCMatrix, DenseMatrix, SparseVector, diag}

@@ -1,11 +1,11 @@
-package api.registration
+package other
 
-import api.registration.cpd.CPDFactory
 import api.registration.utils.PointSequenceConverter
+import other.cpd.CPDFactory
 import scalismo.common.{DiscreteDomain, DiscreteField, DomainWarp, Vectorizer}
 import scalismo.geometry.{NDSpace, Point}
 
-import language.higherKinds
+import scala.language.higherKinds
 
 class RigidCPDRegistration[D: NDSpace, DDomain[D] <: DiscreteDomain[D]](
     template: DDomain[D],

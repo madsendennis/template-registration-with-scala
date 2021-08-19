@@ -1,7 +1,7 @@
-package api.registration
+package other
 
-import api.registration.icp.ICPFactory
 import api.registration.utils.Registrator
+import other.icp.ICPFactory
 import scalismo.common.UnstructuredPoints.Create
 import scalismo.common._
 import scalismo.geometry.{NDSpace, Point}

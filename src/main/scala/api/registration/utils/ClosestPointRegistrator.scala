@@ -17,16 +17,16 @@ object NonRigidClosestPointRegistrator {
   // Todo: Different ICP "flavours", closest point in pointset, closest point on surface, closest point along normal
   // Todo: Swap directions
 
-  private def isPointOnBoundary(id: PointId, mesh: TriangleMesh[_3D]): Boolean = {
+  def isPointOnBoundary(id: PointId, mesh: TriangleMesh[_3D]): Boolean = {
     mesh.operations.pointIsOnBoundary(id)
   }
 
-  private def isNormalDirectionOpposite(n1: EuclideanVector[_3D], n2: EuclideanVector[_3D]): Boolean = {
+  def isNormalDirectionOpposite(n1: EuclideanVector[_3D], n2: EuclideanVector[_3D]): Boolean = {
     // Todo: Add angle hyperparameter - currently it only looks if the vectors are opposite
     (n1 dot n2) < 0
   }
 
-  private def isClosestPointIntersecting(id: PointId, cp: Point[_3D], mesh: TriangleMesh[_3D]): Boolean = {
+  def isClosestPointIntersecting(id: PointId, cp: Point[_3D], mesh: TriangleMesh[_3D]): Boolean = {
     val p = mesh.pointSet.point(id)
     val v = p-cp
     val intersectingPoints = mesh.operations.getIntersectionPoints(p, v).filter(f => f != p) // All intersecting points with the closest point vector

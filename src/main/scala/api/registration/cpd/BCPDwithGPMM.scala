@@ -20,14 +20,12 @@ abstract class GPMMfitting[D: NDSpace, DDomain[D] <: DiscreteDomain[D]](
                                                                          lambda: Double, // Noise scaling, R+
                                                                          gamma: Double, // Initial noise scaling, R+
                                                                          k: Double,
-                                                                         max_iterations: Int,
-                                                                         modelView: Option[modelViewer]
+                                                                         max_iterations: Int
                                                                        )(
                                                                          implicit vectorizer: Vectorizer[Point[D]],
                                                                          domainWarper: DomainWarp[D, DDomain],
                                                                          dataConverter: PointSequenceConverter[D],
-                                                                         simTrans: TransformationHelper[D],
-                                                                         viewer: ModelViewerHelper[D]
+                                                                         simTrans: TransformationHelper[D]
                                                                        ) {
   println("New version using GPMM and BCPD update method")
   require(lambda > 0)
@@ -59,12 +57,12 @@ abstract class GPMMfitting[D: NDSpace, DDomain[D] <: DiscreteDomain[D]](
       val sigma2 = pars.sigma2
       println(s"BCPD, iteration: ${i}/${max_iterations}, sigma2: ${sigma2}")
       val iter = Iteration(gpmmParsInit, pars, transformationType)
-      if (modelView.nonEmpty) {
-        if (i % modelView.get.updateFrequency == 0) {
-          modelView.get.modelView.shapeTransformationView.coefficients = iter._1
-          modelView.get.modelView.poseTransformationView.transformation = viewer.getRigidTransformation(iter._2.simTrans)
-        }
-      }
+//      if (modelView.nonEmpty) {
+//        if (i % modelView.get.updateFrequency == 0) {
+//          modelView.get.modelView.shapeTransformationView.coefficients = iter._1
+//          modelView.get.modelView.poseTransformationView.transformation = viewer.getRigidTransformation(iter._2.simTrans)
+//        }
+//      }
 
       val sigmaDiff = math.abs(iter._2.sigma2 - sigma2)
       if (sigmaDiff < tolerance) {
@@ -117,15 +115,13 @@ class BCPDwithGPMM[D: NDSpace, DDomain[D] <: DiscreteDomain[D]](
                                                                  lambda: Double, // Noise scaling, R+
                                                                  gamma: Double, // Initial noise scaling, R+
                                                                  k: Double,
-                                                                 max_iterations: Int,
-                                                                 modelView: Option[modelViewer]
+                                                                 max_iterations: Int
                                                                )(
                                                                  implicit vectorizer: Vectorizer[Point[D]],
                                                                  domainWarper: DomainWarp[D, DDomain],
                                                                  dataConverter: PointSequenceConverter[D],
-                                                                 simTrans: TransformationHelper[D],
-                                                                 viewer: ModelViewerHelper[D]
-                                                               ) extends GPMMfitting(gpmm, targetPoints, w, lambda, gamma, k, max_iterations, modelView) {
+                                                                 simTrans: TransformationHelper[D]
+                                                               ) extends GPMMfitting(gpmm, targetPoints, w, lambda, gamma, k, max_iterations) {
 
   override def Iteration(gpmmPars: DenseVector[Double], pars: BCPDParameters[D], transformationType: GlobalTranformationType): (DenseVector[Double], BCPDParameters[D]) = {
     val instance = gpmm.instance(gpmmPars)
@@ -192,15 +188,12 @@ class SpecialICPwithGPMM(
                           lambda: Double, // Noise scaling, R+
                           gamma: Double, // Initial noise scaling, R+
                           k: Double,
-                          max_iterations: Int,
-                          modelView: Option[modelViewer]
-                        )(
+                          max_iterations: Int)(
                           implicit vectorizer: Vectorizer[Point[_3D]],
                           domainWarper: DomainWarp[_3D, TriangleMesh],
                           dataConverter: PointSequenceConverter[_3D],
-                          simTrans: TransformationHelper[_3D],
-                          viewer: ModelViewerHelper[_3D]
-                        ) extends GPMMfitting(gpmm, target.pointSet.points.toSeq, w, lambda, gamma, k, max_iterations, modelView) {
+                          simTrans: TransformationHelper[_3D]
+) extends GPMMfitting(gpmm, target.pointSet.points.toSeq, w, lambda, gamma, k, max_iterations) {
 
   override def Iteration(gpmmPars: DenseVector[Double], pars: BCPDParameters[_3D], transformationType: GlobalTranformationType): (DenseVector[Double], BCPDParameters[_3D]) = {
     val initialTransformation = TranslationAfterScalingAfterRotation(pars.simTrans.t, pars.simTrans.s, pars.simTrans.R)

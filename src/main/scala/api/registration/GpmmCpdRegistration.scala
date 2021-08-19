@@ -40,10 +40,9 @@ class GpmmBcpdRegistration[D: NDSpace, DDomain[A] <: DiscreteDomain[A]](
                                                                          lambda: Double = 2.0, // Noise scaling, R+
                                                                          gamma: Double = 1.0, // Initial noise scaling, R+
                                                                          k: Double = 1.0,
-                                                                         max_iterations: Int = 100,
-                                                                         modelView: Option[modelViewer] = None
-                                                                       )(implicit warper: DomainWarp[D, DDomain], vectorizer: Vectorizer[Point[D]], pointSequenceConverter: PointSequenceConverter[D], simTrans: TransformationHelper[D], viewer: ModelViewerHelper[D]) {
-  val bcpd = new BCPDwithGPMM(gpmm, targetPoints.pointSet.points.toSeq, w, lambda, gamma, k, max_iterations, modelView)
+                                                                         max_iterations: Int = 100
+                                                                       )(implicit warper: DomainWarp[D, DDomain], vectorizer: Vectorizer[Point[D]], pointSequenceConverter: PointSequenceConverter[D], simTrans: TransformationHelper[D]) {
+  val bcpd = new BCPDwithGPMM(gpmm, targetPoints.pointSet.points.toSeq, w, lambda, gamma, k, max_iterations)
   private val defaultInitialGPMMPars = DenseVector.zeros[Double](gpmm.rank)
 
   private val defaultTransformationPars = SimilarityTransformParameters[D](
@@ -76,10 +75,9 @@ class GpmmSpecialICPRegistration(
                                   lambda: Double = 2.0, // Noise scaling, R+
                                   gamma: Double = 1.0, // Initial noise scaling, R+
                                   k: Double = 1.0,
-                                  max_iterations: Int = 100,
-                                  modelView: Option[modelViewer] = None
-                                )(implicit warper: DomainWarp[_3D, TriangleMesh], vectorizer: Vectorizer[Point[_3D]], pointSequenceConverter: PointSequenceConverter[_3D], simTrans: TransformationHelper[_3D], viewer: ModelViewerHelper[_3D]) {
-  val bcpd = new SpecialICPwithGPMM(gpmm, targetPoints, w, lambda, gamma, k, max_iterations, modelView)
+                                  max_iterations: Int = 100
+                                )(implicit warper: DomainWarp[_3D, TriangleMesh], vectorizer: Vectorizer[Point[_3D]], pointSequenceConverter: PointSequenceConverter[_3D], simTrans: TransformationHelper[_3D]) {
+  val bcpd = new SpecialICPwithGPMM(gpmm, targetPoints, w, lambda, gamma, k, max_iterations)
   private val defaultInitialGPMMPars = DenseVector.zeros[Double](gpmm.rank)
 
   private val defaultTransformationPars = SimilarityTransformParameters[_3D](
