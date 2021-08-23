@@ -1,82 +1,92 @@
 package api
 
-import api.registration.utils.{AlignmentTransforms, GlobalTranformationType, NoTransforms, SimilarityTransformParameters}
-import breeze.linalg.{DenseMatrix, DenseVector}
-import scalismo.common.{DiscreteDomain, PointId}
-import scalismo.geometry.{EuclideanVector, Landmark, NDSpace, Point, _3D}
+import breeze.linalg.DenseVector
+import scalismo.common.PointId
+import scalismo.geometry.{Landmark, Point, _3D}
 import scalismo.mesh.TriangleMesh
-import scalismo.statisticalmodel.{MultivariateNormalDistribution, PointDistributionModel}
-import scalismo.transformations.{RigidTransformation, Rotation, Scaling, Translation, TranslationAfterRotation, TranslationAfterRotation3D}
+import scalismo.statisticalmodel.{MultivariateNormalDistribution, PointDistributionModel, StatisticalMeshModel}
+import scalismo.transformations.RigidTransformation
 
-case class IterationPars(model: PointDistributionModel[_3D, TriangleMesh], alpha: DenseVector[Double], transform: SimilarityTransformParameters[_3D])
-
-//trait CorrespondenceConfig
 case class CorrespondencePairs(pairs: IndexedSeq[(PointId, Point[_3D])])
 
+trait GingrConfig[T <: GingrRegistrationState[T]] {
+  def maxIterations(): Int
 
-case class DefaultRegistrationPars(max_iterations: Int, tolerance: Double, landmarkAlignTarget: Boolean)
-
-trait UncertaintyComputationPars
-
-trait GiNGRConfig {
-  def Initialize(reference: TriangleMesh[_3D], target: TriangleMesh[_3D], default: DefaultRegistrationPars): Unit
-
-  def GetCorrespondence(reference: TriangleMesh[_3D], target: TriangleMesh[_3D]): CorrespondencePairs
-
-  def UpdateUncertainty(meanUpdate: TriangleMesh[_3D]): Unit
-
-  def PointIdUncertainty(id: PointId): MultivariateNormalDistribution
+  def converged: (T, T) => Boolean
 }
 
-trait GiNGRbase {
-  def Registration(target: TriangleMesh[_3D], targetLandmarks: Option[Seq[Landmark[_3D]]] = None, regConfig: DefaultRegistrationPars): (PointDistributionModel[_3D, TriangleMesh], DenseVector[Double], SimilarityTransformParameters[_3D])
+trait GingrRegistrationState[T] {
+  val iteration: Int
 
-  def Iteration(pars: IterationPars, target: TriangleMesh[_3D]): IterationPars
+  /** initial prior model */
+  def model(): PointDistributionModel[_3D, TriangleMesh]
+
+  /** parameters of the current fitting state in the initial prior model */
+  def modelParameters(): DenseVector[Double]
+
+  def target(): TriangleMesh[_3D]
+
+  def fit(): TriangleMesh[_3D]
+
+  def rigidAlignment(): RigidTransformation[_3D]
+
+  def scaling(): Double = 1.0
+
+  def converged(): Boolean
+
+  /**
+    * Updates the current state with the new fit.
+    *
+    * @param next The newly calculated shape / fit.
+    */
+  private[api] def updateFit(next: TriangleMesh[_3D]): T
 }
 
+trait GingrAlgorithm[State <: GingrRegistrationState[State]] {
+  def initialize(): State
 
-class GiNGR(model: PointDistributionModel[_3D, TriangleMesh],
-            registrationConfig: GiNGRConfig,
-            transformationType: GlobalTranformationType = NoTransforms,
-            modelLandmarks: Option[Seq[Landmark[_3D]]] = None
-           ) extends GiNGRbase {
+  val getCorrespondence: (State) => CorrespondencePairs
+  val getUncertainty: (PointId, State) => MultivariateNormalDistribution
 
-  override def Registration(target: TriangleMesh[_3D], targetLandmarks: Option[Seq[Landmark[_3D]]], regConfig: DefaultRegistrationPars): (PointDistributionModel[_3D, TriangleMesh], DenseVector[Double], SimilarityTransformParameters[_3D]) = {
-    val initGlobalTransform: TranslationAfterRotation[_3D] = if (regConfig.landmarkAlignTarget) { // Maybe align model instead and return alignment as globalTrans ???
-      AlignmentTransforms.computeTransform(modelLandmarks.get, targetLandmarks.get, Point(0, 0, 0))
-    } else TranslationAfterRotation[_3D](Translation(EuclideanVector(0, 0, 0)), Rotation(0, 0, 0, Point(0, 0, 0)))
-
-    val modelAligned = model.transform(initGlobalTransform)
-
-    registrationConfig.Initialize(modelAligned.mean, target, regConfig) // Initialize method specific parameters
-    val initGlobalTrans = SimilarityTransformParameters[_3D](Scaling(1.0), Translation(EuclideanVector(0, 0, 0)), Rotation(0, 0, 0, Point(0, 0, 0))) // Input initial Global model transform (needed if calling Register multiple times with different detail levels)
-    val initAlpha = DenseVector.zeros[Double](modelAligned.rank)
-    val initPars = IterationPars(model = modelAligned, alpha = initAlpha, transform = initGlobalTrans) // Also possible to input from user as with GlobalTrans
-
-    val fit = (0 until regConfig.max_iterations).foldLeft(initPars) { (pars, i) =>
-      val iterationPars = Iteration(pars, target)
-      println(s"Iteration: ${i}/${regConfig.max_iterations}") // Update with logger.info instead
-      iterationPars
+  def update(current: State): State = {
+    val currentFit = current.fit()
+    val correspondences = getCorrespondence(current)
+    val uncertainObservations = correspondences.pairs.map { pair =>
+      val (pid, point) = pair
+      val uncertainty = getUncertainty(pid, current)
+      (pid, point, uncertainty)
     }
-    val globalTrans = SimilarityTransformParameters[_3D](Scaling(1.0), initGlobalTransform.translation, initGlobalTransform.rotation) // Update to be the iterated model update
-    (modelAligned, fit.alpha, globalTrans)
+    val posterior = current.model.posterior(uncertainObservations)
+    current.updateFit(posterior.mean)
   }
 
-  override def Iteration(pars: IterationPars, target: TriangleMesh[_3D]): IterationPars = {
-    //    val globalTrans = pars.transform.
-    val instance = pars.model.instance(pars.alpha) // Apply possible global transformation
-    val corrPairs = registrationConfig.GetCorrespondence(instance, target)
-    //    val posteriorMean = gpmm.newReference(instance, NearestNeighborInterpolator()).posterior(cp, sigma2).mean
-    val corrWithUncertainty = corrPairs.pairs.map { f => (f._1, f._2, registrationConfig.PointIdUncertainty(f._1)) } // Add uncertainty pr/landmark
-    val posteriorMean = pars.model.posterior(corrWithUncertainty).mean // Update uncertainty to: Map[PointId, MultivariateNormalDistribution]
+  def run(
+           target: TriangleMesh[_3D],
+           targetLandmarks: Option[Seq[Landmark[_3D]]],
+           model: PointDistributionModel[_3D, TriangleMesh],
+           modelLandmarks: Option[Seq[Landmark[_3D]]]
+         ): State = {
+    val initialState: State = initialize()
+    runFromState(target, targetLandmarks, model, modelLandmarks, initialState)
+  }
 
-    registrationConfig.UpdateUncertainty(posteriorMean)
+  def runFromState(
+                    target: TriangleMesh[_3D],
+                    targetLandmarks: Option[Seq[Landmark[_3D]]],
+                    model: PointDistributionModel[_3D, TriangleMesh],
+                    modelLandmarks: Option[Seq[Landmark[_3D]]],
+                    initialState: State
+                  ): State = {
 
-    pars.copy(alpha = pars.model.coefficients(posteriorMean))
+    val registration: Iterator[State] = Iterator.iterate(initialState) { current =>
+      val next = update(current)
+      next
+    }
+
+    val states: Iterator[State] = registration.take(100)
+    val fit: State = states.dropWhile(state =>
+      !state.converged() && state.iteration > 0
+    ).next()
+    fit
   }
 }
-
-
-//class PGiNGR() extends GiNGR{
-//
-//}
