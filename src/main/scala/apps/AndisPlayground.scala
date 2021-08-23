@@ -9,19 +9,31 @@ import scalismo.statisticalmodel.{MultivariateNormalDistribution, PointDistribut
 import scalismo.transformations.{RigidTransformation, TranslationAfterRotationSpace3D}
 import api.registration.utils.NonRigidClosestPointRegistrator.ClosestPointTriangleMesh3D
 
-trait GingrConfig {
+trait GingrConfig[T <: GingrRegistrationState[T]] {
   def maxIterations(): Int
-  def tolerance(): Double
+  def converged: (T, T) => Boolean
 }
 
 trait GingrRegistrationState[T <: GingrRegistrationState[T]] {
   val iteration: Int
+
+  /** initial prior model */
   def model(): PointDistributionModel[_3D, TriangleMesh3D]
+
+  /** parameters of the current fitting state in the initial prior model */
+  def modelParameters(): DenseVector[Double]
+
   def target(): TriangleMesh3D
   def fit(): TriangleMesh3D
-  def pose(): RigidTransformation[_3D]
+  def rigidAlignment(): RigidTransformation[_3D]
+  def scaling(): Double = 1.0
   def converged(): Boolean
-  def updateFit(next: TriangleMesh3D): T
+
+  /**
+    * Updates the current state with the new fit.
+    * @param next The newly calculated shape / fit.
+    */
+  private[apps] def updateFit(next: TriangleMesh3D): T
 }
 
 trait GingrAlgorithm[State <: GingrRegistrationState[State]] {
@@ -40,6 +52,34 @@ trait GingrAlgorithm[State <: GingrRegistrationState[State]] {
     val posterior = current.model.posterior(uncertainObservations)
     current.updateFit(posterior.mean)
   }
+
+  def run(
+      target: TriangleMesh3D,
+      targetLandmarks: Option[Seq[Landmark[_3D]]],
+      model: StatisticalMeshModel,
+      modelLandmarks: Option[Seq[Landmark[_3D]]]
+  ): State = {
+    val initialState: State = initialize()
+    runFromState(target, targetLandmarks, model, modelLandmarks, initialState)
+  }
+
+  def runFromState(
+      target: TriangleMesh3D,
+      targetLandmarks: Option[Seq[Landmark[_3D]]],
+      model: StatisticalMeshModel,
+      modelLandmarks: Option[Seq[Landmark[_3D]]],
+      initialState: State
+  ): State = {
+
+    val registration: Iterator[State] = Iterator.iterate(initialState) { current =>
+      val next = update(current)
+      next
+    }
+
+    val states: Iterator[State] = registration.take(100)
+    val fit: State = states.dropWhile(state => !state.converged()).next()
+    fit
+  }
 }
 
 object Correspondence {
@@ -51,46 +91,26 @@ object Correspondence {
   }
 }
 
-object GingrRegistration {
-  def run[State <: GingrRegistrationState[State], Algo <: GingrAlgorithm[State], Config <: GingrConfig](
-      target: TriangleMesh3D,
-      targetLandmarks: Option[Seq[Landmark[_3D]]],
-      model: StatisticalMeshModel,
-      modelLandmarks: Option[Seq[Landmark[_3D]]],
-      algo: Algo,
-      config: Config
-  ): State = {
-    val initialState: State = algo.initialize()
-
-    val registration: Iterator[State] = Iterator.iterate(initialState) { current =>
-      val next = algo.update(current)
-      next
-    }
-
-    val states: Iterator[State] = registration.take(100)
-    val fit: State = states.dropWhile(state => !state.converged()).next()
-    fit
-  }
-}
-
-case class IcpConfiguration(
-    override val maxIterations: Int = 100,
-    override val tolerance: Double = 1e-8,
-    initialSigma: Double = 100.0,
-    endSigma: Double = 1.0
-) extends GingrConfig {}
-
 case class IcpRegistrationState(
     override val model: PointDistributionModel[_3D, TriangleMesh3D],
+    override val modelParameters: DenseVector[Double],
     override val target: TriangleMesh3D,
     override val fit: TriangleMesh3D,
-    override val pose: RigidTransformation[_3D],
+    override val rigidAlignment: RigidTransformation[_3D],
+    override val scaling: Double = 1.0,
     override val converged: Boolean,
     sigma2: Double = 1.0,
     override val iteration: Int = 0
 ) extends GingrRegistrationState[IcpRegistrationState] {
   override def updateFit(next: TriangleMesh3D): IcpRegistrationState = this.copy(fit = next)
 }
+
+case class IcpConfiguration(
+    override val maxIterations: Int = 100,
+    override val converged: (IcpRegistrationState, IcpRegistrationState) => Boolean = (_: IcpRegistrationState, _: IcpRegistrationState) => false,
+    initialSigma: Double = 100.0,
+    endSigma: Double = 1.0
+) extends GingrConfig[IcpRegistrationState] {}
 
 class IcpRegistration(
     val target: TriangleMesh3D,
@@ -103,12 +123,15 @@ class IcpRegistration(
 
   override def initialize(): IcpRegistrationState = {
     val initial =
-      IcpRegistrationState(pdm,
-                           target,
-                           pdm.mean,
-                           DenseVector.zeros[Double](pdm.rank),
-                           TranslationAfterRotationSpace3D(Point(0, 0, 0)).identityTransformation,
-                           false)
+      IcpRegistrationState(
+        pdm,
+        DenseVector.zeros[Double](pdm.rank),
+        target,
+        pdm.mean,
+        DenseVector.zeros[Double](pdm.rank),
+        TranslationAfterRotationSpace3D(Point(0, 0, 0)).identityTransformation,
+        false
+      )
     initial
   }
 
@@ -135,7 +158,7 @@ object IcpUserApplication extends App {
   // parameters for algorithm
   val config: IcpConfiguration = IcpConfiguration(maxIterations = 7)
 
-  val algo: IcpRegistration = new IcpRegistration(target, config, PointDistributionModel[_3D, TriangleMesh3D](model.gp))
+  val registration: IcpRegistration = new IcpRegistration(target, config, PointDistributionModel[_3D, TriangleMesh3D](model.gp))
 
-  val fit: IcpRegistrationState = GingrRegistration.run(target, None, model, None, algo, config)
+  val fit: IcpRegistrationState = registration.run(target, None, model, None)
 }
