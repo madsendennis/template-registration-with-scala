@@ -3,7 +3,6 @@ package apps
 import java.io.File
 
 import api.registration.config.{CpdConfiguration, CpdRegistration, IcpConfiguration, IcpRegistration}
-import api.registration.utils.AlignmentTransforms
 import scalismo.common.interpolation.NearestNeighborInterpolator
 import scalismo.geometry.{Point, _3D}
 import scalismo.io.{LandmarkIO, MeshIO, StatisticalModelIO}
@@ -27,14 +26,14 @@ object playingAround extends App {
   println(s"Target points: ${target.pointSet.numberOfPoints}")
 
   // ICP
-  val config = IcpConfiguration(maxIterations = 50, initialSigma = 10000, endSigma = 10)
-  val registrator = new IcpRegistration(target, config, model)
-  val finalState = registrator.run(target, Option(targetLM), model, Option(modelLM))
+//  val config = IcpConfiguration(maxIterations = 200, initialSigma = 10000, endSigma = 10)
+//  val registrator = new IcpRegistration(target, config, model)
+//  val finalState = registrator.run(target, Option(targetLM), model, Option(modelLM))
 
   // CPD
-//  val config = CpdConfiguration(maxIterations = 50)
-//  val registrator = new CpdRegistration(target, config, model)
-//  val finalState = registrator.run(target, Option(targetLM), model, Option(modelLM))
+  val config = CpdConfiguration(maxIterations = 20)
+  val registrator = new CpdRegistration(target, config, model)
+  val finalState = registrator.run(target, Option(targetLM), model, Option(modelLM))
 
 
   val fit = finalState.fit
@@ -50,4 +49,5 @@ object playingAround extends App {
   ui.show(targetGroup, target, "target")
   ui.show(otherGroup, fit, "fit")
   showModel.shapeModelTransformationView.shapeTransformationView.coefficients = finalState.modelParameters
+  showModel.shapeModelTransformationView.poseTransformationView.transformation = finalState.alignment
 }

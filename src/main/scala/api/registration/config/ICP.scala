@@ -1,13 +1,13 @@
 package api.registration.config
 
 import api.registration.utils.NonRigidClosestPointRegistrator.ClosestPointTriangleMesh3D
-import api.{CorrespondencePairs, GingrAlgorithm, GingrConfig, GingrRegistrationState}
+import api.{CorrespondencePairs, GingrAlgorithm, GingrConfig, GingrRegistrationState, GlobalTranformationType, NoTransforms, RigidTransforms}
 import breeze.linalg.{DenseMatrix, DenseVector}
 import scalismo.common.PointId
 import scalismo.geometry.{Point, _3D}
 import scalismo.mesh.TriangleMesh
 import scalismo.statisticalmodel.{MultivariateNormalDistribution, PointDistributionModel}
-import scalismo.transformations.{RigidTransformation, TranslationAfterRotationSpace3D}
+import scalismo.transformations.{RigidTransformation, TranslationAfterRotation, TranslationAfterRotationSpace3D}
 
 object ICPCorrespondence {
   def estimate[T](state: GingrRegistrationState[T]): CorrespondencePairs = {
@@ -23,13 +23,18 @@ case class IcpRegistrationState(
                                  override val modelParameters: DenseVector[Double],
                                  override val target: TriangleMesh[_3D],
                                  override val fit: TriangleMesh[_3D],
-                                 override val rigidAlignment: RigidTransformation[_3D],
+                                 override val alignment: TranslationAfterRotation[_3D],
                                  override val scaling: Double = 1.0,
                                  override val converged: Boolean,
-                                 sigma2: Double = 1.0,
-                                 override val iteration: Int = 0
+                                 override val sigma2: Double = 1.0,
+                                 override val iteration: Int = 0,
+                                 override val globalTransformation: GlobalTranformationType = NoTransforms
                                ) extends GingrRegistrationState[IcpRegistrationState] {
   override def updateFit(next: TriangleMesh[_3D]): IcpRegistrationState = this.copy(fit = next)
+  override private[api] def updateAlignment(next: TranslationAfterRotation[_3D]): IcpRegistrationState = this.copy(alignment = next)
+  override private[api] def updateScaling(next: Double): IcpRegistrationState = this.copy(scaling = next)
+  override private[api] def updateModelParameters(next: DenseVector[Double]): IcpRegistrationState = this.copy(modelParameters = next)
+  override private[api] def updateIteration(next: Int): IcpRegistrationState = this.copy(iteration = next)
 }
 
 case class IcpConfiguration(
@@ -64,37 +69,12 @@ class IcpRegistration(
     initial
   }
 
-  val sigmaStep = (config.initialSigma - config.endSigma) / config.maxIterations.toDouble
+  private val sigmaStep = (config.initialSigma - config.endSigma) / config.maxIterations.toDouble
 
-  def updateSigma(current: Double): Double = {
-    current - sigmaStep;
-  }
 
   // possibility to override the update function, or just use the base class method?
-  override def update(current: IcpRegistrationState): IcpRegistrationState = {
-    println(s"iteration: ${current.iteration}, sigma: ${current.sigma2}")
-    val correspondences = getCorrespondence(current)
-    val uncertainObservations = correspondences.pairs.map { pair =>
-      val (pid, point) = pair
-      val uncertainty = getUncertainty(pid, current)
-      (pid, point, uncertainty)
-    }
-    val mean = current.model.posterior(uncertainObservations).mean
-    val (model, alpha, fit) = if(true) {
-      val alpha = current.model.coefficients(mean)
-      (current.model, alpha, mean)
-    }
-    else{
-      val model = updateModel(current.model, mean)
-      (model, current.modelParameters, model.mean)
-    }
-    current.copy(
-      model = model,
-      modelParameters = alpha,
-      fit = fit,
-      sigma2 = updateSigma(current.sigma2),
-      iteration = current.iteration - 1
-    )
+  override def updateSigma2(current: IcpRegistrationState): IcpRegistrationState = {
+    current.copy(sigma2 = current.sigma2 - sigmaStep)
   }
 }
 

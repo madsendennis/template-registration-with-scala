@@ -32,6 +32,7 @@ Implementation of the non-rigid ICP algorithms from https://gravis.dmi.unibas.ch
     - [ ] pre-alignment
     - [ ] fitting of posterior model
     - [ ] include landmarks in correspondence pairs)
+ - [ ] Multiresolution fitting
  - [ ] BCPD implementation
  - [ ] General D implementation instead of _3D
  - [ ] General topology type instead of TriangleMesh
@@ -42,3 +43,6 @@ Implementation of the non-rigid ICP algorithms from https://gravis.dmi.unibas.ch
  - [ ] Update framework to allow for probabilitic steps (with MH)
     - [ ] General correspondence proposal
  
+ 
+## Bugs
+ - [ ] Iterator in GiNGR hard set to max 100
