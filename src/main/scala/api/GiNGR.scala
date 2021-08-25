@@ -2,8 +2,10 @@ package api
 
 import breeze.linalg.DenseVector
 import scalismo.common.PointId
+import scalismo.common.interpolation.NearestNeighborInterpolator
 import scalismo.geometry.{Landmark, Point, _3D}
 import scalismo.mesh.TriangleMesh
+import scalismo.registration.LandmarkRegistration
 import scalismo.statisticalmodel.{MultivariateNormalDistribution, PointDistributionModel, StatisticalMeshModel}
 import scalismo.transformations.RigidTransformation
 
@@ -68,6 +70,11 @@ trait GingrAlgorithm[State <: GingrRegistrationState[State]] {
          ): State = {
     val initialState: State = initialize()
     runFromState(target, targetLandmarks, model, modelLandmarks, initialState)
+  }
+
+  def updateModel(model: PointDistributionModel[_3D, TriangleMesh], fit: TriangleMesh[_3D]): PointDistributionModel[_3D, TriangleMesh] = {
+    val transform = LandmarkRegistration.rigid3DLandmarkRegistration(model.mean.pointSet.points.toSeq zip fit.pointSet.points.toSeq, Point(0,0,0))
+    PointDistributionModel[_3D, TriangleMesh](fit, model.transform(transform).gp.interpolate(NearestNeighborInterpolator()))
   }
 
   def runFromState(

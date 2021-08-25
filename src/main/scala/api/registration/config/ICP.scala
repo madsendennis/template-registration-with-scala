@@ -72,6 +72,7 @@ class IcpRegistration(
 
   // possibility to override the update function, or just use the base class method?
   override def update(current: IcpRegistrationState): IcpRegistrationState = {
+    println(s"iteration: ${current.iteration}, sigma: ${current.sigma2}")
     val correspondences = getCorrespondence(current)
     val uncertainObservations = correspondences.pairs.map { pair =>
       val (pid, point) = pair
@@ -79,10 +80,18 @@ class IcpRegistration(
       (pid, point, uncertainty)
     }
     val mean = current.model.posterior(uncertainObservations).mean
-    val alpha = current.model.coefficients(mean)
+    val (model, alpha, fit) = if(true) {
+      val alpha = current.model.coefficients(mean)
+      (current.model, alpha, mean)
+    }
+    else{
+      val model = updateModel(current.model, mean)
+      (model, current.modelParameters, model.mean)
+    }
     current.copy(
+      model = model,
       modelParameters = alpha,
-      fit = mean,
+      fit = fit,
       sigma2 = updateSigma(current.sigma2),
       iteration = current.iteration - 1
     )

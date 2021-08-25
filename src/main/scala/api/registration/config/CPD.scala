@@ -142,6 +142,7 @@ class CpdRegistration(
 
   // possibility to override the update function, or just use the base class method?
   override def update(current: CpdRegistrationState): CpdRegistrationState = {
+    println(s"iteration: ${current.iteration}, sigma: ${current.sigma2}")
     val currentP = current.copy(P = Expectation(current))
     val correspondences = getCorrespondence(currentP)
     val uncertainObservations = correspondences.pairs.map { pair =>
@@ -149,12 +150,20 @@ class CpdRegistration(
       val uncertainty = getUncertainty(pid, currentP)
       (pid, point, uncertainty)
     }
-    val mean = currentP.model.posterior(uncertainObservations).mean
-    val alpha = currentP.model.coefficients(mean)
+    val mean = current.model.posterior(uncertainObservations).mean
+    val (model, alpha, fit) = if(true) {
+      val alpha = current.model.coefficients(mean)
+      (current.model, alpha, mean)
+    }
+    else{
+      val model = updateModel(current.model, mean)
+      (model, current.modelParameters, model.mean)
+    }
     currentP.copy(
+      model = model,
       modelParameters = alpha,
-      fit = mean,
-      sigma2 = updateSigma(currentP, mean.pointSet.points.toSeq),
+      fit = fit,
+      sigma2 = updateSigma(currentP, fit.pointSet.points.toSeq),
       iteration = currentP.iteration - 1
     )
   }
