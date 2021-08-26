@@ -3,7 +3,7 @@ package api
 import breeze.linalg.DenseVector
 import scalismo.common.PointId
 import scalismo.common.interpolation.NearestNeighborInterpolator
-import scalismo.geometry.{Landmark, Point, _3D}
+import scalismo.geometry.{_3D, Landmark, Point}
 import scalismo.mesh.TriangleMesh
 import scalismo.registration.LandmarkRegistration
 import scalismo.statisticalmodel.{MultivariateNormalDistribution, PointDistributionModel, StatisticalMeshModel}
@@ -48,10 +48,10 @@ trait GingrRegistrationState[T] {
 
   def globalTransformation(): GlobalTranformationType
 
-  /**
-    * Updates the current state with the new fit.
+  /** Updates the current state with the new fit.
     *
-    * @param next The newly calculated shape / fit.
+    * @param next
+    *   The newly calculated shape / fit.
     */
   private[api] def updateFit(next: TriangleMesh[_3D]): T
 
@@ -103,41 +103,38 @@ trait GingrAlgorithm[State <: GingrRegistrationState[State]] {
   }
 
   def run(
-           target: TriangleMesh[_3D],
-           targetLandmarks: Option[Seq[Landmark[_3D]]],
-           model: PointDistributionModel[_3D, TriangleMesh],
-           modelLandmarks: Option[Seq[Landmark[_3D]]]
-         ): State = {
+    target: TriangleMesh[_3D],
+    targetLandmarks: Option[Seq[Landmark[_3D]]],
+    model: PointDistributionModel[_3D, TriangleMesh],
+    modelLandmarks: Option[Seq[Landmark[_3D]]]
+  ): State = {
     val initialState: State = initialize()
     runFromState(target, targetLandmarks, model, modelLandmarks, initialState)
   }
 
   def rigidTransform(current: TriangleMesh[_3D], update: TriangleMesh[_3D]): TranslationAfterScalingAfterRotation[_3D] = {
-    val t = LandmarkRegistration.rigid3DLandmarkRegistration(current.pointSet.points.toSeq zip update.pointSet.points.toSeq, Point(0, 0, 0))
+    val t = LandmarkRegistration.rigid3DLandmarkRegistration(current.pointSet.points.toSeq.zip(update.pointSet.points.toSeq), Point(0, 0, 0))
     TranslationAfterScalingAfterRotation(t.translation, Scaling(1.0), t.rotation)
   }
 
   def similarityTransform(current: TriangleMesh[_3D], update: TriangleMesh[_3D]): TranslationAfterScalingAfterRotation[_3D] = {
-    LandmarkRegistration.similarity3DLandmarkRegistration(current.pointSet.points.toSeq zip update.pointSet.points.toSeq, Point(0, 0, 0))
+    LandmarkRegistration.similarity3DLandmarkRegistration(current.pointSet.points.toSeq.zip(update.pointSet.points.toSeq), Point(0, 0, 0))
   }
 
-
   def runFromState(
-                    target: TriangleMesh[_3D],
-                    targetLandmarks: Option[Seq[Landmark[_3D]]],
-                    model: PointDistributionModel[_3D, TriangleMesh],
-                    modelLandmarks: Option[Seq[Landmark[_3D]]],
-                    initialState: State
-                  ): State = {
+    target: TriangleMesh[_3D],
+    targetLandmarks: Option[Seq[Landmark[_3D]]],
+    model: PointDistributionModel[_3D, TriangleMesh],
+    modelLandmarks: Option[Seq[Landmark[_3D]]],
+    initialState: State
+  ): State = {
     val registration: Iterator[State] = Iterator.iterate(initialState) { current =>
       val next = update(current)
       next
     }
 
     val states: Iterator[State] = registration.take(100)
-    val fit: State = states.dropWhile(state =>
-      !state.converged() && state.iteration > 0
-    ).next()
+    val fit: State = states.dropWhile(state => !state.converged() && state.iteration > 0).next()
     fit
   }
 }

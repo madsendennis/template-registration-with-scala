@@ -2,10 +2,10 @@ package api.registration.config
 
 import api.registration.utils.PointSequenceConverter
 import api.{CorrespondencePairs, GingrAlgorithm, GingrConfig, GingrRegistrationState, GlobalTranformationType, NoTransforms, RigidTransforms}
-import breeze.linalg.{Axis, DenseMatrix, DenseVector, sum, tile}
+import breeze.linalg.{sum, tile, Axis, DenseMatrix, DenseVector}
 import scalismo.common.PointId
 import scalismo.geometry.Point.Point3DVectorizer
-import scalismo.geometry.{Point, _3D}
+import scalismo.geometry.{_3D, Point}
 import scalismo.mesh.TriangleMesh
 import scalismo.statisticalmodel.{MultivariateNormalDistribution, PointDistributionModel}
 import scalismo.transformations.{RigidTransformation, TranslationAfterRotation, TranslationAfterRotationSpace3D}
@@ -33,48 +33,48 @@ object CPDCorrespondence {
 }
 
 case class CpdRegistrationState(
-                                 override val model: PointDistributionModel[_3D, TriangleMesh],
-                                 override val modelParameters: DenseVector[Double],
-                                 override val target: TriangleMesh[_3D],
-                                 override val fit: TriangleMesh[_3D],
-                                 override val alignment: TranslationAfterRotation[_3D],
-                                 override val scaling: Double = 1.0,
-                                 override val converged: Boolean,
-                                 override val sigma2: Double,
-                                 w: Double = 0.0,
-                                 lambda: Double = 1.0,
-                                 P: CpdRegistrationState => DenseMatrix[Double],
-                                 override val iteration: Int = 0,
-                                 override val globalTransformation: GlobalTranformationType = RigidTransforms
-                               ) extends GingrRegistrationState[CpdRegistrationState] {
+  override val model: PointDistributionModel[_3D, TriangleMesh],
+  override val modelParameters: DenseVector[Double],
+  override val target: TriangleMesh[_3D],
+  override val fit: TriangleMesh[_3D],
+  override val alignment: TranslationAfterRotation[_3D],
+  override val scaling: Double = 1.0,
+  override val converged: Boolean,
+  override val sigma2: Double,
+  w: Double = 0.0,
+  lambda: Double = 1.0,
+  P: CpdRegistrationState => DenseMatrix[Double],
+  override val iteration: Int = 0,
+  override val globalTransformation: GlobalTranformationType = RigidTransforms
+) extends GingrRegistrationState[CpdRegistrationState] {
   override def updateFit(next: TriangleMesh[_3D]): CpdRegistrationState = this.copy(fit = next)
   override private[api] def updateAlignment(next: TranslationAfterRotation[_3D]): CpdRegistrationState = this.copy(alignment = next)
   override private[api] def updateScaling(next: Double): CpdRegistrationState = this.copy(scaling = next)
-  override private[api] def updateModelParameters(next: DenseVector[Double]): CpdRegistrationState =  this.copy(modelParameters = next)
+  override private[api] def updateModelParameters(next: DenseVector[Double]): CpdRegistrationState = this.copy(modelParameters = next)
   override private[api] def updateIteration(next: Int): CpdRegistrationState = this.copy(iteration = next)
 }
 
 case class CpdConfiguration(
-                             override val maxIterations: Int = 100,
-                             override val converged: (CpdRegistrationState, CpdRegistrationState) => Boolean = (last: CpdRegistrationState, current: CpdRegistrationState) => {
-                               last.sigma2 == current.sigma2
-                             },
-                             initialSigma: Option[Double] = None,
-                             w: Double = 0.0,
-                             lambda: Double = 1.0
-                           ) extends GingrConfig[CpdRegistrationState] {}
+  override val maxIterations: Int = 100,
+  override val converged: (CpdRegistrationState, CpdRegistrationState) => Boolean = (last: CpdRegistrationState, current: CpdRegistrationState) => {
+    last.sigma2 == current.sigma2
+  },
+  initialSigma: Option[Double] = None,
+  w: Double = 0.0,
+  lambda: Double = 1.0
+) extends GingrConfig[CpdRegistrationState] {}
 
 class CpdRegistration(
-                       val target: TriangleMesh[_3D],
-                       val config: CpdConfiguration,
-                       val pdm: PointDistributionModel[_3D, TriangleMesh],
-                       override val getCorrespondence: CpdRegistrationState => CorrespondencePairs = (state: CpdRegistrationState) => CPDCorrespondence.estimate(state),
-                       override val getUncertainty: (PointId, CpdRegistrationState) => MultivariateNormalDistribution = (id: PointId, state: CpdRegistrationState) => {
-                         val P = state.P(state)
-                         val P1inv = 1.0 / sum(P, Axis._1)
-                         MultivariateNormalDistribution(DenseVector.zeros[Double](3), DenseMatrix.eye[Double](3) * state.sigma2 * state.lambda * P1inv(id.id))
-                       }
-                     ) extends GingrAlgorithm[CpdRegistrationState] {
+  val target: TriangleMesh[_3D],
+  val config: CpdConfiguration,
+  val pdm: PointDistributionModel[_3D, TriangleMesh],
+  override val getCorrespondence: CpdRegistrationState => CorrespondencePairs = (state: CpdRegistrationState) => CPDCorrespondence.estimate(state),
+  override val getUncertainty: (PointId, CpdRegistrationState) => MultivariateNormalDistribution = (id: PointId, state: CpdRegistrationState) => {
+    val P = state.P(state)
+    val P1inv = 1.0 / sum(P, Axis._1)
+    MultivariateNormalDistribution(DenseVector.zeros[Double](3), DenseMatrix.eye[Double](3) * state.sigma2 * state.lambda * P1inv(id.id))
+  }
+) extends GingrAlgorithm[CpdRegistrationState] {
   val dataConverter: PointSequenceConverter[_3D] = PointSequenceConverter.denseMatrixToPoint3DSequence
   private val cashedExpectation: Memoize[CpdRegistrationState, DenseMatrix[Double]] = Memoize(computeExpectation, 2)
 
@@ -144,11 +144,10 @@ class CpdRegistration(
     val Pt1 = sum(P, Axis._0)
     val Np = sum(P1)
 
-    val xPx: Double = Pt1.t dot sum(X *:* X, Axis._1)
+    val xPx: Double = Pt1.t.dot(sum(X *:* X, Axis._1))
     val yPy: Double = P1.t * sum(TY *:* TY, Axis._1)
     val trPXY: Double = sum(TY *:* (P * X))
     val sigma2 = (xPx - 2 * trPXY + yPy) / (Np * 3.0)
     current.copy(sigma2 = sigma2)
   }
 }
-

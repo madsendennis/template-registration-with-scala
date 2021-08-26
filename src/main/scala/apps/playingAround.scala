@@ -4,12 +4,11 @@ import java.io.File
 
 import api.registration.config.{CpdConfiguration, CpdRegistration, IcpConfiguration, IcpRegistration}
 import scalismo.common.interpolation.NearestNeighborInterpolator
-import scalismo.geometry.{Point, _3D}
+import scalismo.geometry.{_3D, Point}
 import scalismo.io.{LandmarkIO, MeshIO, StatisticalModelIO}
 import scalismo.mesh.TriangleMesh
 import scalismo.statisticalmodel.PointDistributionModel
 import scalismo.ui.api.ScalismoUI
-
 
 object playingAround extends App {
   scalismo.initialize()
@@ -34,7 +33,6 @@ object playingAround extends App {
   val config = CpdConfiguration(maxIterations = 20)
   val registrator = new CpdRegistration(target, config, model)
   val finalState = registrator.run(target, Option(targetLM), model, Option(modelLM))
-
 
   val fit = finalState.fit
   val m = finalState.model
