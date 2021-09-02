@@ -1,7 +1,7 @@
 package api.registration.cpd
 
 import api.registration.utils.PointSequenceConverter
-import breeze.linalg.{Axis, DenseMatrix, DenseVector, sum, tile}
+import breeze.linalg.{sum, tile, Axis, DenseMatrix, DenseVector}
 import scalismo.common.interpolation.NearestNeighborInterpolator
 import scalismo.common.{DiscreteDomain, DomainWarp, Vectorizer}
 import scalismo.geometry._
@@ -10,15 +10,15 @@ import scalismo.statisticalmodel.{MultivariateNormalDistribution, PointDistribut
 import scala.collection.parallel.ParSeq
 
 class NonRigidCPDwithGPMM[D: NDSpace, DDomain[D] <: DiscreteDomain[D]](
-                                                                     val gpmm: PointDistributionModel[D, DDomain],
-                                                                     val lambda: Double,
-                                                                     val w: Double,
-                                                                     val max_iteration: Int,
-                                                                   )(
-                                                                     implicit val vectorizer: Vectorizer[Point[D]],
-                                                                     domainWarper: DomainWarp[D, DDomain],
-                                                                     dataConverter: PointSequenceConverter[D]
-                                                                   ) {
+  val gpmm: PointDistributionModel[D, DDomain],
+  val lambda: Double,
+  val w: Double,
+  val max_iteration: Int
+)(implicit
+  val vectorizer: Vectorizer[Point[D]],
+  domainWarper: DomainWarp[D, DDomain],
+  dataConverter: PointSequenceConverter[D]
+) {
   println("New version using GPMM as G and optimizing loops")
   require(lambda > 0)
   require(0 <= w && w < 1.0)
@@ -45,7 +45,7 @@ class NonRigidCPDwithGPMM[D: NDSpace, DDomain[D] <: DiscreteDomain[D]](
     fit._1
   }
 
-  private def computeInitialSigma2(template: Seq[Point[D]], target: Seq[Point[D]]): Double = {
+  def computeInitialSigma2(template: Seq[Point[D]], target: Seq[Point[D]]): Double = {
     val N = target.length
     val M = template.length
     val sumDist = template.flatMap { pm =>
@@ -56,12 +56,12 @@ class NonRigidCPDwithGPMM[D: NDSpace, DDomain[D] <: DiscreteDomain[D]](
     sumDist / (vectorizer.dim * N * M)
   }
 
-  private def computeSigma2(X: DenseMatrix[Double], TY: DenseMatrix[Double], P: DenseMatrix[Double]): Double = {
+  def computeSigma2(X: DenseMatrix[Double], TY: DenseMatrix[Double], P: DenseMatrix[Double]): Double = {
     val P1 = sum(P, Axis._1)
     val Pt1 = sum(P, Axis._0)
     val Np = sum(P1)
 
-    val xPx: Double = Pt1.t dot sum(TY *:* TY, Axis._1)
+    val xPx: Double = Pt1.t.dot(sum(TY *:* TY, Axis._1))
     val yPy: Double = P1.t * sum(X *:* X, Axis._1)
     val trPXY: Double = sum(X *:* (P * TY))
     (xPx - 2 * trPXY + yPy) / (Np * vectorizer.dim)
@@ -87,7 +87,6 @@ class NonRigidCPDwithGPMM[D: NDSpace, DDomain[D] <: DiscreteDomain[D]](
 
     P /:/ den
   }
-
 
   def getCorrespondence(template: Seq[Point[D]], target: Seq[Point[D]], sigma2: Double): (Seq[(Point[D], MultivariateNormalDistribution)], DenseMatrix[Double]) = {
     val D = vectorizer.dim

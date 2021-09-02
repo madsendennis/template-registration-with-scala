@@ -4,7 +4,7 @@ import java.io.File
 
 import api.registration.config.{CpdConfiguration, CpdRegistration, IcpConfiguration, IcpRegistration}
 import scalismo.common.interpolation.NearestNeighborInterpolator
-import scalismo.geometry.{_3D, Point}
+import scalismo.geometry._3D
 import scalismo.io.{LandmarkIO, MeshIO, StatisticalModelIO}
 import scalismo.mesh.TriangleMesh
 import scalismo.statisticalmodel.PointDistributionModel

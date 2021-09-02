@@ -106,10 +106,11 @@ trait GingrAlgorithm[State <: GingrRegistrationState[State]] {
     target: TriangleMesh[_3D],
     targetLandmarks: Option[Seq[Landmark[_3D]]],
     model: PointDistributionModel[_3D, TriangleMesh],
-    modelLandmarks: Option[Seq[Landmark[_3D]]]
+    modelLandmarks: Option[Seq[Landmark[_3D]]],
+    callBack: State => Unit = _ => None
   ): State = {
     val initialState: State = initialize()
-    runFromState(target, targetLandmarks, model, modelLandmarks, initialState)
+    runFromState(target, targetLandmarks, model, modelLandmarks, callBack, initialState)
   }
 
   def rigidTransform(current: TriangleMesh[_3D], update: TriangleMesh[_3D]): TranslationAfterScalingAfterRotation[_3D] = {
@@ -126,10 +127,12 @@ trait GingrAlgorithm[State <: GingrRegistrationState[State]] {
     targetLandmarks: Option[Seq[Landmark[_3D]]],
     model: PointDistributionModel[_3D, TriangleMesh],
     modelLandmarks: Option[Seq[Landmark[_3D]]],
+    callBack: State => Unit = _ => None,
     initialState: State
   ): State = {
     val registration: Iterator[State] = Iterator.iterate(initialState) { current =>
       val next = update(current)
+      callBack(next)
       next
     }
 
