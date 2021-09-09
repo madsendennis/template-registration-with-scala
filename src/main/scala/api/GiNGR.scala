@@ -36,6 +36,7 @@ trait RegistrationState[T] {
   def scaling(): Double = 1.0
   def converged(): Boolean
   def sigma2(): Double
+  def threshold: Double
   def globalTransformation(): GlobalTranformationType
 
   /** Updates the current state with the new fit.
@@ -59,8 +60,9 @@ case class GeneralRegistrationState(
   override val fit: TriangleMesh[_3D],
   override val alignment: TranslationAfterRotation[_3D],
   override val scaling: Double = 1.0,
-  override val converged: Boolean,
+  override val converged: Boolean = false,
   override val sigma2: Double = 1.0,
+  override val threshold: Double = 1e-10,
   override val iteration: Int = 0,
   override val globalTransformation: GlobalTranformationType = NoTransforms
 ) extends RegistrationState[GeneralRegistrationState] {
@@ -106,11 +108,7 @@ object GeneralRegistrationState {
         target = target,
         targetLandmarks = targetLandmarks,
         fit = model.mean,
-        alignment = TranslationAfterRotationSpace3D(Point(0, 0, 0)).identityTransformation,
-        scaling = 1.0,
-        converged = false,
-        sigma2 = 0,
-        iteration = 0
+        alignment = TranslationAfterRotationSpace3D(Point(0, 0, 0)).identityTransformation
       )
     initial
   }
