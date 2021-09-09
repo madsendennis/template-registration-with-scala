@@ -2,8 +2,8 @@ package apps
 
 import java.io.File
 
-import api.RigidTransforms
-import api.registration.config.{CpdConfiguration, CpdRegistration, CpdRegistrationState, IcpConfiguration, IcpRegistration}
+import api.{GeneralRegistrationState, RigidTransforms}
+import api.registration.config.{CpdConfiguration, CpdRegistration, CpdRegistrationState, IcpConfiguration, IcpRegistration, IcpRegistrationState}
 import scalismo.common.interpolation.NearestNeighborInterpolator
 import scalismo.geometry._3D
 import scalismo.io.{LandmarkIO, MeshIO, StatisticalModelIO}
@@ -25,19 +25,16 @@ object playingAround extends App {
   println(s"Model points: ${model.reference.pointSet.numberOfPoints}")
   println(s"Target points: ${target.pointSet.numberOfPoints}")
 
-  // ICP
-//  val config = IcpConfiguration(maxIterations = 200, initialSigma = 10000, endSigma = 10)
-//  val registrator = new IcpRegistration(target, config, model)
-//  val finalState = registrator.run(target, Option(targetLM), model, Option(modelLM))
-
   // CPD
-  val config = CpdConfiguration(maxIterations = 20)
-  val initState = CpdRegistrationState(model, target, config)
-  val registrator = new CpdRegistration()
-  val finalState = registrator.run(initState)
-  RigidTransforms
-  val fit = finalState.fit
-  val m = finalState.model
+  val configCPD = CpdConfiguration(maxIterations = 20)
+  val initState = CpdRegistrationState(GeneralRegistrationState(model, target), configCPD)
+  val registratorCPD = new CpdRegistration()
+  val finalCPD = registratorCPD.run(initState).general
+  // ICP
+  val configICP = IcpConfiguration(maxIterations = 20, initialSigma = 100, endSigma = 10)
+  val icpState = IcpRegistrationState(finalCPD, configICP)
+  val registratorICP = new IcpRegistration()
+  val finalState = registratorICP.run(icpState).general
 
   val ui = ScalismoUI()
   val modelGroup = ui.createGroup("model")
@@ -45,9 +42,9 @@ object playingAround extends App {
   val targetGroup = ui.createGroup("target")
   val otherGroup = ui.createGroup("other")
   ui.show(initmodelGroup, model, "init")
-  val showModel = ui.show(modelGroup, m, "model")
+  val showModel = ui.show(modelGroup, model, "model")
   ui.show(targetGroup, target, "target")
-  ui.show(otherGroup, fit, "fit")
+  ui.show(otherGroup, finalState.fit, "fit")
   showModel.shapeModelTransformationView.shapeTransformationView.coefficients = finalState.modelParameters
   showModel.shapeModelTransformationView.poseTransformationView.transformation = finalState.alignment
 }
