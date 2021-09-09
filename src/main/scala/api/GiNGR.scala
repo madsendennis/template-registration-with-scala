@@ -19,13 +19,13 @@ case object NoTransforms extends GlobalTranformationType
 
 case class CorrespondencePairs(pairs: IndexedSeq[(PointId, Point[_3D])])
 
-trait GingrConfig[T <: GingrRegistrationState[T]] {
+trait GingrConfig[T <: GingrState[T]] {
   def maxIterations(): Int
 
   def converged: (T, T) => Boolean
 }
 
-trait GingrRegistrationState[T] {
+trait GingrState[T] {
   def iteration(): Int
 
   /** initial prior model */
@@ -34,7 +34,11 @@ trait GingrRegistrationState[T] {
   /** parameters of the current fitting state in the initial prior model */
   def modelParameters(): DenseVector[Double]
 
+  def modelLandmarks(): Option[Seq[Landmark[_3D]]]
+
   def target(): TriangleMesh[_3D]
+
+  def targetLandmarks(): Option[Seq[Landmark[_3D]]]
 
   def fit(): TriangleMesh[_3D]
 
@@ -64,9 +68,7 @@ trait GingrRegistrationState[T] {
   private[api] def updateIteration(next: Int): T
 }
 
-trait GingrAlgorithm[State <: GingrRegistrationState[State]] {
-  def initialize(): State
-
+trait GingrAlgorithm[State <: GingrState[State]] {
   val getCorrespondence: (State) => CorrespondencePairs
   val getUncertainty: (PointId, State) => MultivariateNormalDistribution
 
@@ -75,7 +77,6 @@ trait GingrAlgorithm[State <: GingrRegistrationState[State]] {
   }
 
   def update(current: State): State = {
-    println(s"Iteration: ${current.iteration()}, sigma2: ${current.sigma2()}")
     val correspondences = getCorrespondence(current)
     val uncertainObservations = correspondences.pairs.map { pair =>
       val (pid, point) = pair
@@ -102,17 +103,6 @@ trait GingrAlgorithm[State <: GingrRegistrationState[State]] {
     updateSigma2(updated)
   }
 
-  def run(
-    target: TriangleMesh[_3D],
-    targetLandmarks: Option[Seq[Landmark[_3D]]],
-    model: PointDistributionModel[_3D, TriangleMesh],
-    modelLandmarks: Option[Seq[Landmark[_3D]]],
-    callBack: State => Unit = _ => None
-  ): State = {
-    val initialState: State = initialize()
-    runFromState(target, targetLandmarks, model, modelLandmarks, callBack, initialState)
-  }
-
   def rigidTransform(current: TriangleMesh[_3D], update: TriangleMesh[_3D]): TranslationAfterScalingAfterRotation[_3D] = {
     val t = LandmarkRegistration.rigid3DLandmarkRegistration(current.pointSet.points.toSeq.zip(update.pointSet.points.toSeq), Point(0, 0, 0))
     TranslationAfterScalingAfterRotation(t.translation, Scaling(1.0), t.rotation)
@@ -122,21 +112,18 @@ trait GingrAlgorithm[State <: GingrRegistrationState[State]] {
     LandmarkRegistration.similarity3DLandmarkRegistration(current.pointSet.points.toSeq.zip(update.pointSet.points.toSeq), Point(0, 0, 0))
   }
 
-  def runFromState(
-    target: TriangleMesh[_3D],
-    targetLandmarks: Option[Seq[Landmark[_3D]]],
-    model: PointDistributionModel[_3D, TriangleMesh],
-    modelLandmarks: Option[Seq[Landmark[_3D]]],
-    callBack: State => Unit = _ => None,
-    initialState: State
+  def run(
+    initialState: State,
+    callBack: State => Unit = _ => None
   ): State = {
+//    val state = initialize(initialState)
     val registration: Iterator[State] = Iterator.iterate(initialState) { current =>
       val next = update(current)
       callBack(next)
       next
     }
 
-    val states: Iterator[State] = registration.take(100)
+    val states: Iterator[State] = registration.take(10000)
     val fit: State = states.dropWhile(state => !state.converged() && state.iteration > 0).next()
     fit
   }

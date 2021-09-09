@@ -2,7 +2,8 @@ package apps
 
 import java.io.File
 
-import api.registration.config.{CpdConfiguration, CpdRegistration, IcpConfiguration, IcpRegistration}
+import api.RigidTransforms
+import api.registration.config.{CpdConfiguration, CpdRegistration, CpdRegistrationState, IcpConfiguration, IcpRegistration}
 import scalismo.common.interpolation.NearestNeighborInterpolator
 import scalismo.geometry._3D
 import scalismo.io.{LandmarkIO, MeshIO, StatisticalModelIO}
@@ -31,9 +32,10 @@ object playingAround extends App {
 
   // CPD
   val config = CpdConfiguration(maxIterations = 20)
-  val registrator = new CpdRegistration(target, config, model)
-  val finalState = registrator.run(target, Option(targetLM), model, Option(modelLM))
-
+  val initState = CpdRegistrationState(model, target, config)
+  val registrator = new CpdRegistration()
+  val finalState = registrator.run(initState)
+  RigidTransforms
   val fit = finalState.fit
   val m = finalState.model
 
