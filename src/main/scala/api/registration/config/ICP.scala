@@ -20,8 +20,7 @@ case class IcpConfiguration(
   override val converged: (GeneralRegistrationState, GeneralRegistrationState) => Boolean = (last: GeneralRegistrationState, current: GeneralRegistrationState) => false,
   override val useLandmarkCorrespondence: Boolean = true,
   initialSigma: Double = 100.0,
-  endSigma: Double = 1.0,
-  globalTransformation: GlobalTranformationType = NoTransforms
+  endSigma: Double = 1.0
 ) extends GingrConfig {
   val sigmaStep: Double = (initialSigma - endSigma) / maxIterations.toDouble
 

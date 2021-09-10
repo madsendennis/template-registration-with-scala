@@ -2,7 +2,7 @@ package apps
 
 import java.io.File
 
-import api.{GeneralRegistrationState, RigidTransforms}
+import api.{GeneralRegistrationState, NoTransforms, RigidTransforms}
 import api.registration.config.{CpdConfiguration, CpdRegistration, CpdRegistrationState, IcpConfiguration, IcpRegistration, IcpRegistrationState}
 import scalismo.common.interpolation.NearestNeighborInterpolator
 import scalismo.geometry._3D
@@ -27,7 +27,7 @@ object playingAround extends App {
 
   // CPD
   val configCPD = CpdConfiguration(maxIterations = 20)
-  val initState = CpdRegistrationState(GeneralRegistrationState(model, target), configCPD)
+  val initState = CpdRegistrationState(GeneralRegistrationState(model, target, transform = RigidTransforms), configCPD)
   val registratorCPD = new CpdRegistration()
   val finalCPD = registratorCPD.run(initState).general
   // ICP

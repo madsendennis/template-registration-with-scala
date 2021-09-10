@@ -22,6 +22,10 @@ case object NoTransforms extends GlobalTranformationType
 
 case class CorrespondencePairs(pairs: IndexedSeq[(PointId, Point[_3D])])
 
+object CorrespondencePairs {
+  def empty(): CorrespondencePairs = new CorrespondencePairs(IndexedSeq())
+}
+
 trait RegistrationState[T] {
   def iteration(): Int
   /** initial prior model */
@@ -64,7 +68,7 @@ case class GeneralRegistrationState(
   override val sigma2: Double = 1.0,
   override val threshold: Double = 1e-10,
   override val iteration: Int = 0,
-  override val globalTransformation: GlobalTranformationType = NoTransforms
+  override val globalTransformation: GlobalTranformationType = RigidTransforms
 ) extends RegistrationState[GeneralRegistrationState] {
 
   /** Updates the current state with the new fit.
@@ -112,14 +116,28 @@ trait GingrRegistrationState[State] {
 
 object GeneralRegistrationState {
   def apply(model: PointDistributionModel[_3D, TriangleMesh], target: TriangleMesh[_3D]): GeneralRegistrationState = {
-    apply(model, Seq(), target, Seq())
+    apply(model, target, RigidTransforms)
+  }
+
+  def apply(model: PointDistributionModel[_3D, TriangleMesh], target: TriangleMesh[_3D], transform: GlobalTranformationType): GeneralRegistrationState = {
+    apply(model, Seq(), target, Seq(), transform)
   }
 
   def apply(
     model: PointDistributionModel[_3D, TriangleMesh],
     modelLandmarks: Seq[Landmark[_3D]],
     target: TriangleMesh[_3D],
-    targetLandmarks: Seq[Landmark[_3D]]): GeneralRegistrationState = {
+    targetLandmarks: Seq[Landmark[_3D]]
+  ): GeneralRegistrationState = {
+    apply(model, modelLandmarks, target, targetLandmarks, RigidTransforms)
+  }
+
+  def apply(
+    model: PointDistributionModel[_3D, TriangleMesh],
+    modelLandmarks: Seq[Landmark[_3D]],
+    target: TriangleMesh[_3D],
+    targetLandmarks: Seq[Landmark[_3D]],
+    transform: GlobalTranformationType): GeneralRegistrationState = {
     val initial =
       new GeneralRegistrationState(
         model = model,
@@ -128,7 +146,8 @@ object GeneralRegistrationState {
         target = target,
         targetLandmarks = Option(targetLandmarks),
         fit = model.mean,
-        alignment = TranslationAfterRotationSpace3D(Point(0, 0, 0)).identityTransformation
+        alignment = TranslationAfterRotationSpace3D(Point(0, 0, 0)).identityTransformation,
+        globalTransformation = transform
       )
     initial
   }
@@ -178,6 +197,11 @@ trait GingrAlgorithm[State <: GingrRegistrationState[State]] {
 
   def similarityTransform(current: TriangleMesh[_3D], update: TriangleMesh[_3D]): TranslationAfterScalingAfterRotation[_3D] = {
     LandmarkRegistration.similarity3DLandmarkRegistration(current.pointSet.points.toSeq.zip(update.pointSet.points.toSeq), Point(0, 0, 0))
+  }
+
+  def instance(model: PointDistributionModel[_3D, TriangleMesh], state: GeneralRegistrationState): TriangleMesh[_3D] = {
+    val scale = Scaling[_3D](state.scaling)
+    model.instance(state.modelParameters).transform(state.alignment).transform(scale)
   }
 
   def run(
