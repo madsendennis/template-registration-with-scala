@@ -85,6 +85,7 @@ case class CpdConfiguration(
   override val converged: (GeneralRegistrationState, GeneralRegistrationState) => Boolean = (last: GeneralRegistrationState, current: GeneralRegistrationState) => {
     last.sigma2 == current.sigma2 || current.sigma2 < current.threshold
   },
+  override val useLandmarkCorrespondence: Boolean = true,
   initialSigma: Option[Double] = None,
   w: Double = 0.0,
   lambda: Double = 1.0

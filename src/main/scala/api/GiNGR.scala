@@ -1,6 +1,6 @@
 package api
 
-import breeze.linalg.DenseVector
+import breeze.linalg.{DenseMatrix, DenseVector}
 import scalismo.common.PointId
 import scalismo.geometry.{_3D, Landmark, Point}
 import scalismo.mesh.TriangleMesh
@@ -77,11 +77,31 @@ case class GeneralRegistrationState(
   override private[api] def updateScaling(next: Double): GeneralRegistrationState = this.copy(scaling = next)
   override private[api] def updateModelParameters(next: DenseVector[Double]): GeneralRegistrationState = this.copy(modelParameters = next)
   override private[api] def updateIteration(next: Int): GeneralRegistrationState = this.copy(iteration = next)
+
+  lazy val landmarkCorrespondences: IndexedSeq[(PointId, Point[_3D], MultivariateNormalDistribution)] = {
+    if (modelLandmarks.nonEmpty && targetLandmarks.nonEmpty) {
+      val m = modelLandmarks.get
+      val t = targetLandmarks.get
+      val commonLmNames = m.map(_.id) intersect t.map(_.id)
+      commonLmNames.map { name =>
+        val mPoint = m.find(_.id == name).get
+        val tPoint = t.find(_.id == name).get
+        (
+          model.reference.pointSet.findClosestPoint(mPoint.point).id,
+          tPoint.point,
+          mPoint.uncertainty.getOrElse(MultivariateNormalDistribution(DenseVector.zeros[Double](3), DenseMatrix.eye[Double](3)))
+        )
+      }.toIndexedSeq
+    } else {
+      IndexedSeq()
+    }
+  }
 }
 
 trait GingrConfig {
   def maxIterations(): Int
   def converged: (GeneralRegistrationState, GeneralRegistrationState) => Boolean
+  def useLandmarkCorrespondence(): Boolean
 }
 
 trait GingrRegistrationState[State] {
@@ -92,21 +112,21 @@ trait GingrRegistrationState[State] {
 
 object GeneralRegistrationState {
   def apply(model: PointDistributionModel[_3D, TriangleMesh], target: TriangleMesh[_3D]): GeneralRegistrationState = {
-    apply(model, None, target, None)
+    apply(model, Seq(), target, Seq())
   }
 
   def apply(
     model: PointDistributionModel[_3D, TriangleMesh],
-    modelLandmarks: Option[Seq[Landmark[_3D]]],
+    modelLandmarks: Seq[Landmark[_3D]],
     target: TriangleMesh[_3D],
-    targetLandmarks: Option[Seq[Landmark[_3D]]]): GeneralRegistrationState = {
+    targetLandmarks: Seq[Landmark[_3D]]): GeneralRegistrationState = {
     val initial =
       new GeneralRegistrationState(
         model = model,
         modelParameters = DenseVector.zeros[Double](model.rank),
-        modelLandmarks = modelLandmarks,
+        modelLandmarks = Option(modelLandmarks),
         target = target,
-        targetLandmarks = targetLandmarks,
+        targetLandmarks = Option(targetLandmarks),
         fit = model.mean,
         alignment = TranslationAfterRotationSpace3D(Point(0, 0, 0)).identityTransformation
       )
@@ -124,11 +144,13 @@ trait GingrAlgorithm[State <: GingrRegistrationState[State]] {
 
   def update(current: State): State = {
     val correspondences = getCorrespondence(current)
-    val uncertainObservations = correspondences.pairs.map { pair =>
+    val uncertainObservationsEstimated: IndexedSeq[(PointId, Point[_3D], MultivariateNormalDistribution)] = correspondences.pairs.map { pair =>
       val (pid, point) = pair
       val uncertainty = getUncertainty(pid, current)
       (pid, point, uncertainty)
     }
+    val uncertainObservations =
+      if (current.config.useLandmarkCorrespondence()) uncertainObservationsEstimated ++ current.general.landmarkCorrespondences else uncertainObservationsEstimated
     val posterior = current.general.model.posterior(uncertainObservations)
     val globalTranform: TranslationAfterScalingAfterRotation[_3D] = current.general.globalTransformation match {
       case SimilarityTransforms => similarityTransform(current.general.fit, posterior.mean)
