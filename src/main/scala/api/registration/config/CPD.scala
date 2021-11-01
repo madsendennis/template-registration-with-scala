@@ -99,6 +99,7 @@ class CpdRegistration(
     MultivariateNormalDistribution(DenseVector.zeros[Double](3), DenseMatrix.eye[Double](3) * state.general.sigma2 * state.config.lambda * P1inv(id.id))
   }
 ) extends GingrAlgorithm[CpdRegistrationState] {
+  def name = "CPD"
   val dataConverter: PointSequenceConverter[_3D] = PointSequenceConverter.denseMatrixToPoint3DSequence
 
   // possibility to override the update function, or just use the base class method?

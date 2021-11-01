@@ -1,13 +1,11 @@
 package api
 
-import api.sampling.ModelFittingParameters
-import api.sampling.evaluators.EvaluationCaching
 import breeze.linalg.{DenseMatrix, DenseVector}
 import scalismo.common.PointId
 import scalismo.geometry.{_3D, Landmark, Point}
 import scalismo.mesh.TriangleMesh
 import scalismo.registration.LandmarkRegistration
-import scalismo.sampling.{DistributionEvaluator, ProposalGenerator, TransitionProbability, TransitionRatio}
+import scalismo.sampling.{DistributionEvaluator, ProposalGenerator, SymmetricTransitionRatio, TransitionProbability}
 import scalismo.sampling.algorithms.MetropolisHastings
 import scalismo.sampling.loggers.{BestSampleLogger, ChainStateLogger, ChainStateLoggerContainer}
 import scalismo.statisticalmodel.{MultivariateNormalDistribution, PointDistributionModel}
@@ -18,11 +16,13 @@ import scalismo.transformations.{
   TranslationAfterScalingAfterRotation,
   TranslationAfterScalingAfterRotationSpace3D
 }
-import scalismo.utils.Random
+import scalismo.utils.{Memoize, Random}
 import scalismo.sampling.loggers.ChainStateLogger.implicits._
+import scalismo.sampling.proposals.MixtureProposal
+import scalismo.sampling.proposals.MixtureProposal.ProposalGeneratorWithTransition
+import scalismo.sampling.proposals.MixtureProposal.implicits._
 
 trait GlobalTranformationType
-
 case object SimilarityTransforms extends GlobalTranformationType
 case object RigidTransforms extends GlobalTranformationType
 case object NoTransforms extends GlobalTranformationType
@@ -34,21 +34,21 @@ object CorrespondencePairs {
 }
 
 trait RegistrationState[T] {
-  def iteration(): Int
-  /** initial prior model */
-  def model(): PointDistributionModel[_3D, TriangleMesh]
-  /** parameters of the current fitting state in the initial prior model */
-  def modelParameters(): DenseVector[Double]
-  def modelLandmarks(): Option[Seq[Landmark[_3D]]]
-  def target(): TriangleMesh[_3D]
-  def targetLandmarks(): Option[Seq[Landmark[_3D]]]
-  def fit(): TriangleMesh[_3D]
-  def alignment(): TranslationAfterRotation[_3D]
-  def scaling(): Double = 1.0
-  def converged(): Boolean
-  def sigma2(): Double
-  def threshold: Double
-  def globalTransformation(): GlobalTranformationType
+  def iteration(): Int // Iterations left from current state
+  def model(): PointDistributionModel[_3D, TriangleMesh] // Prior statistical mesh model
+  def modelParameters(): DenseVector[Double] // parameters of the current fitting state in the model
+  def modelLandmarks(): Option[Seq[Landmark[_3D]]] // Landmarks on the model
+  def target(): TriangleMesh[_3D] // Target mesh
+  def targetLandmarks(): Option[Seq[Landmark[_3D]]] // Landmarks on the target
+  def fit(): TriangleMesh[_3D] // Current fit based on model parameters, global alignment and scaling
+  def alignment(): TranslationAfterRotation[_3D] // Model translation and rotation
+  def scaling(): Double = 1.0 // Model scaling
+  def converged(): Boolean // Has the registration converged???
+  def sigma2(): Double // Global uncertainty parameter
+  def threshold: Double // Convergence threshold
+  def globalTransformation(): GlobalTranformationType // Type of global transformation (none, rigid, similarity)
+  def stepLength(): Double // Step length of a single registration step (0.0 to 1.0)
+//  def probabilistic(): Boolean //
 //  def nonRigidTransformation(): Boolean
 
   /** Updates the current state with the new fit.
@@ -76,7 +76,9 @@ case class GeneralRegistrationState(
   override val sigma2: Double = 1.0,
   override val threshold: Double = 1e-10,
   override val iteration: Int = 0,
-  override val globalTransformation: GlobalTranformationType = RigidTransforms
+  override val globalTransformation: GlobalTranformationType = RigidTransforms,
+  override val stepLength: Double = 0.1
+//  override val probabilistic: Boolean = false
 //  override val nonRigidTransformation: Boolean = true
 ) extends RegistrationState[GeneralRegistrationState] {
 
@@ -170,18 +172,13 @@ object GeneralRegistrationState {
 }
 
 trait GingrAlgorithm[State <: GingrRegistrationState[State]] {
+  def name: String
+  private val cashedPosterior: Memoize[State, PointDistributionModel[_3D, TriangleMesh]] =
+    Memoize(computePosterior, 20)
   val getCorrespondence: (State) => CorrespondencePairs
   val getUncertainty: (PointId, State) => MultivariateNormalDistribution
 
-  def updateSigma2(current: State): State = {
-    current
-  }
-
-  def deterministicUpdate(current: State) = {}
-
-  def stochasticUpdate(current: State) = {}
-
-  def update(current: State): State = {
+  private def computePosterior(current: State): PointDistributionModel[_3D, TriangleMesh] = {
     // Get correspondence between current model instance and the target
     val correspondences = getCorrespondence(current)
     // Add uncertainty to correspondence pairs
@@ -197,17 +194,32 @@ trait GingrAlgorithm[State <: GingrRegistrationState[State]] {
       } else {
         uncertainObservationsEstimated
       }
+    current.general.model.posterior(uncertainObservations)
+  }
 
-    val posterior = current.general.model.posterior(uncertainObservations)
-    val shapeproposal = posterior.mean
+  def updateSigma2(current: State): State = {
+    current
+  }
+
+  def update(current: State, probabilistic: Boolean)(implicit rnd: Random): State = {
+    val posterior = cashedPosterior(current)
+    val shapeproposal = if (!probabilistic) posterior.mean else posterior.sample()
+
+    val newCoefficients = current.general.model.coefficients(shapeproposal)
+    val currentShapeCoefficients = current.general.modelParameters
+    val newShapeCoefficients = currentShapeCoefficients + (newCoefficients - currentShapeCoefficients) * current.general.stepLength
+
+    val newshape = current.general.model.instance(newShapeCoefficients)
+
+    // Need to scale proposal according to "step-length"
     val globalTransform: TranslationAfterScalingAfterRotation[_3D] = current.general.globalTransformation match {
-      case SimilarityTransforms => similarityTransform(current.general.fit, shapeproposal)
-      case RigidTransforms => rigidTransform(current.general.fit, shapeproposal)
+      case SimilarityTransforms => similarityTransform(current.general.fit, newshape)
+      case RigidTransforms => rigidTransform(current.general.fit, newshape)
       case _ => TranslationAfterScalingAfterRotationSpace3D(Point(0, 0, 0)).identityTransformation
     }
     val alignment: TranslationAfterRotation[_3D] = TranslationAfterRotation(globalTransform.translation, globalTransform.rotation)
     val transformedModel = current.general.model.transform(alignment)
-    val alpha = transformedModel.coefficients(shapeproposal)
+    val alpha = transformedModel.coefficients(newshape)
     val fit = transformedModel.instance(alpha).transform(globalTransform.scaling)
 
     val general = current.general
@@ -243,49 +255,103 @@ trait GingrAlgorithm[State <: GingrRegistrationState[State]] {
     model.instance(state.modelParameters).transform(state.alignment).transform(scale)
   }
 
-  def evaluator: DistributionEvaluator[State] = {
-    case class AcceptAllEvaluator() extends DistributionEvaluator[State] {
-      override def logValue(sample: State): Double = 0.0
+  case class evaluatorWrapper(probabilistic: Boolean, evaluator: Option[DistributionEvaluator[State]]) extends DistributionEvaluator[State] {
+    override def logValue(sample: State): Double = {
+      if (!probabilistic) {
+        0.0
+      } else {
+        evaluator.get.logValue(sample)
+      }
     }
-    AcceptAllEvaluator()
   }
 
-  def generator: ProposalGenerator[State] with TransitionRatio[State] = {
-    case class dummyProposal(generatedBy: String = "RotationProposal") extends ProposalGenerator[State] with TransitionProbability[State] {
-      override def propose(current: State): State = {
-        update(current)
-      }
-
-      override def logTransitionProbability(from: State, to: State): Double = 0.0
+  case class generatorWrapperDeterministic(generatedBy: String)(implicit rnd: Random) extends ProposalGenerator[State] with TransitionProbability[State] {
+    override def propose(current: State): State = {
+      update(current, probabilistic = false)
     }
-    dummyProposal()
+
+    override def logTransitionProbability(from: State, to: State): Double = {
+      0.0
+    }
+  }
+
+  case class generatorWrapperStochastic(generatedBy: String)(implicit rnd: Random) extends ProposalGenerator[State] with TransitionProbability[State] {
+    override def propose(current: State): State = {
+      update(current, probabilistic = true)
+    }
+
+    override def logTransitionProbability(from: State, to: State): Double = {
+      val posterior = cashedPosterior(from)
+
+      val compensatedTo = from.general.modelParameters + ((to.general.modelParameters - from.general.modelParameters) / from.general.stepLength)
+      val toMesh = from.general.model.instance(compensatedTo)
+
+      val projectedTo = posterior.coefficients(toMesh)
+      posterior.gp.logpdf(projectedTo)
+      0.0
+    }
+  }
+
+  case class RandomShapeUpdateProposal(modelrank: Int, stdev: Double, generatedBy: String = "RandomShapeUpdateProposal")(implicit random: Random)
+    extends ProposalGenerator[State] with SymmetricTransitionRatio[State] with TransitionProbability[State] {
+
+    private val perturbationDistr = new MultivariateNormalDistribution(DenseVector.zeros(modelrank), DenseMatrix.eye[Double](modelrank) * stdev * stdev)
+
+    override def propose(theta: State): State = {
+      val currentCoeffs = theta.general.modelParameters
+      val updatedCoeffs = currentCoeffs + perturbationDistr.sample
+      theta.updateGeneral(theta.general.updateModelParameters(updatedCoeffs))
+    }
+
+    override def logTransitionProbability(from: State, to: State): Double = {
+      val residual = to.general.modelParameters - from.general.modelParameters
+      perturbationDistr.logpdf(residual)
+    }
+  }
+
+  def generatorCombined(probabilistic: Boolean, modelrank: Int, mixing: Option[ProposalGenerator[State] with TransitionProbability[State]])(implicit
+    rnd: Random): ProposalGenerator[State] with TransitionProbability[State] = {
+    if (!probabilistic) generatorWrapperDeterministic(name)
+    else {
+      val mix = mixing.getOrElse {
+        MixtureProposal(
+          0.05 *: RandomShapeUpdateProposal(modelrank, 0.1, generatedBy = "RandomShape-0.1") +
+            0.05 *: RandomShapeUpdateProposal(modelrank, 0.01, generatedBy = "RandomShape-0.01") +
+            0.05 *: RandomShapeUpdateProposal(modelrank, 0.001, generatedBy = "RandomShape-0.001")
+        )
+      }
+      val informedGenerator = generatorWrapperStochastic(name)
+      val totalMix = mix.map(_._1).sum
+      MixtureProposal(totalMix *: mix + (1.0 - totalMix) *: informedGenerator)
+    }
   }
 
   case class emptyLogger() extends ChainStateLogger[State] {
     override def logState(sample: State): Unit = {}
   }
 
-  def run(initialState: State, callBack: ChainStateLogger[State] = emptyLogger())(implicit rnd: Random): State = {
-    val bestSampleLogger = BestSampleLogger[State](evaluator)
+  case class AcceptAllEvaluator() extends DistributionEvaluator[State] {
+    override def logValue(sample: State): Double = 0.0
+  }
+
+  def run(
+    initialState: State,
+    callBack: ChainStateLogger[State] = emptyLogger(),
+    evaluatorInit: Option[DistributionEvaluator[State]] = None,
+    generatorMixing: Option[ProposalGenerator[State] with TransitionProbability[State]] = None,
+    probabilistic: Boolean = false // false = deterministic registration. true = probabilistic registration
+  )(implicit rnd: Random): State = {
+    // Check that evaluator is available if probabilistic setting!
+    require(true)
+    val evaluator = Some(evaluatorInit.getOrElse(AcceptAllEvaluator()))
+    val registrationEvaluator = evaluatorWrapper(probabilistic, evaluator)
+    val registrationGenerator = generatorCombined(probabilistic, initialState.general.model.rank, generatorMixing)
+    val bestSampleLogger = BestSampleLogger[State](registrationEvaluator)
     val loggers = ChainStateLoggerContainer(Seq(bestSampleLogger, callBack))
-    val mhChain = MetropolisHastings[State](generator, evaluator)
+    val mhChain = MetropolisHastings[State](registrationGenerator, registrationEvaluator)
 
-    val states: IndexedSeq[State] = mhChain.iterator(initialState).loggedWith(loggers).take(initialState.general.iteration).toIndexedSeq
-
-//    val registration: Iterator[State] = Iterator.iterate(initialState) { current =>
-//      val next = update(current)
-//      callBack(next)
-//      next
-//    }
-
-//    val samplingIterator = for ((state, i) <- states.zipWithIndex) yield {
-//      val next = update(state)
-//      callBack.logState(state)
-//      next
-//    }
-
-//      val states: Iterator[State] = registration.take(10000)
-//    val fit: State = states.dropWhile(state => !state.general.converged && state.general.iteration > 0).next()
+    val states = mhChain.iterator(initialState).loggedWith(loggers)
+    states.dropWhile(state => !state.general.converged && state.general.iteration > 0).next()
     val fit = bestSampleLogger.currentBestSample().get
     fit
   }

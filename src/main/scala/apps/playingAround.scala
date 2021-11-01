@@ -4,6 +4,7 @@ import java.io.File
 
 import api.{GeneralRegistrationState, NoTransforms, RigidTransforms}
 import api.registration.config.{CpdConfiguration, CpdRegistration, CpdRegistrationState, IcpConfiguration, IcpRegistration, IcpRegistrationState}
+import api.sampling.evaluators.AcceptAllEvaluator
 import scalismo.common.interpolation.NearestNeighborInterpolator
 import scalismo.geometry._3D
 import scalismo.io.{LandmarkIO, MeshIO, StatisticalModelIO}
@@ -50,7 +51,10 @@ object playingAround extends App {
   val configCPD = CpdConfiguration(maxIterations = 20)
   val initState: CpdRegistrationState = CpdRegistrationState(GeneralRegistrationState(model, target, transform = RigidTransforms), configCPD)
   val registratorCPD = new CpdRegistration()
-  val finalCPD = registratorCPD.run(initState, callBackLogger).general
+  val t1 = System.nanoTime
+  val finalCPD = registratorCPD.run(initState, callBackLogger, probabilistic = false).general
+  val duration = (System.nanoTime - t1) / 1e9d
+  println(s"Registration time: ${duration}")
   // ICP
 //  val configICP = IcpConfiguration(maxIterations = 20, initialSigma = 100, endSigma = 10)
 //  val icpState = IcpRegistrationState(finalCPD, configICP)
