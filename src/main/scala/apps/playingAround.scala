@@ -52,9 +52,10 @@ object playingAround extends App {
   val initState: CpdRegistrationState = CpdRegistrationState(GeneralRegistrationState(model, target, transform = RigidTransforms), configCPD)
   val registratorCPD = new CpdRegistration()
   val t1 = System.nanoTime
-  val finalCPD = registratorCPD.run(initState, callBackLogger, probabilistic = false).general
+  val finalCPD = registratorCPD.run(initState, callBackLogger, probabilistic = true).general
   val duration = (System.nanoTime - t1) / 1e9d
   println(s"Registration time: ${duration}")
+
   // ICP
 //  val configICP = IcpConfiguration(maxIterations = 20, initialSigma = 100, endSigma = 10)
 //  val icpState = IcpRegistrationState(finalCPD, configICP)

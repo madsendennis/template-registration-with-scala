@@ -77,7 +77,7 @@ case class GeneralRegistrationState(
   override val threshold: Double = 1e-10,
   override val iteration: Int = 0,
   override val globalTransformation: GlobalTranformationType = RigidTransforms,
-  override val stepLength: Double = 0.1
+  override val stepLength: Double = 0.5
 //  override val probabilistic: Boolean = false
 //  override val nonRigidTransformation: Boolean = true
 ) extends RegistrationState[GeneralRegistrationState] {
@@ -174,7 +174,7 @@ object GeneralRegistrationState {
 trait GingrAlgorithm[State <: GingrRegistrationState[State]] {
   def name: String
   private val cashedPosterior: Memoize[State, PointDistributionModel[_3D, TriangleMesh]] =
-    Memoize(computePosterior, 20)
+    Memoize(computePosterior, 3)
   val getCorrespondence: (State) => CorrespondencePairs
   val getUncertainty: (PointId, State) => MultivariateNormalDistribution
 
@@ -267,9 +267,9 @@ trait GingrAlgorithm[State <: GingrRegistrationState[State]] {
 
   case class generatorWrapperDeterministic(generatedBy: String)(implicit rnd: Random) extends ProposalGenerator[State] with TransitionProbability[State] {
     override def propose(current: State): State = {
+      println("Propose deterministic")
       update(current, probabilistic = false)
     }
-
     override def logTransitionProbability(from: State, to: State): Double = {
       0.0
     }
@@ -277,6 +277,7 @@ trait GingrAlgorithm[State <: GingrRegistrationState[State]] {
 
   case class generatorWrapperStochastic(generatedBy: String)(implicit rnd: Random) extends ProposalGenerator[State] with TransitionProbability[State] {
     override def propose(current: State): State = {
+      println("Propose stochastic")
       update(current, probabilistic = true)
     }
 
@@ -288,7 +289,6 @@ trait GingrAlgorithm[State <: GingrRegistrationState[State]] {
 
       val projectedTo = posterior.coefficients(toMesh)
       posterior.gp.logpdf(projectedTo)
-      0.0
     }
   }
 
@@ -298,9 +298,10 @@ trait GingrAlgorithm[State <: GingrRegistrationState[State]] {
     private val perturbationDistr = new MultivariateNormalDistribution(DenseVector.zeros(modelrank), DenseMatrix.eye[Double](modelrank) * stdev * stdev)
 
     override def propose(theta: State): State = {
+      println("Random propose")
       val currentCoeffs = theta.general.modelParameters
       val updatedCoeffs = currentCoeffs + perturbationDistr.sample
-      theta.updateGeneral(theta.general.updateModelParameters(updatedCoeffs))
+      theta.updateGeneral(theta.general.updateIteration(theta.general.iteration - 1).updateModelParameters(updatedCoeffs))
     }
 
     override def logTransitionProbability(from: State, to: State): Double = {
@@ -322,7 +323,8 @@ trait GingrAlgorithm[State <: GingrRegistrationState[State]] {
       }
       val informedGenerator = generatorWrapperStochastic(name)
       val totalMix = mix.map(_._1).sum
-      MixtureProposal(totalMix *: mix + (1.0 - totalMix) *: informedGenerator)
+      println(s"Mixing: ${totalMix}, other ${1.0 - totalMix}")
+      MixtureProposal(0.2 *: mix + 0.8 *: informedGenerator)
     }
   }
 
