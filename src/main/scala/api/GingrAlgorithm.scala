@@ -14,7 +14,7 @@
  * limitations under the License.
  */package api
 
-import api.sampling.{EvaluatorWrapper, GeneratorWrapperDeterministic, GeneratorWrapperStochastic, RandomShapeUpdateProposal}
+import api.sampling.{AcceptAllEvaluator, EmptyLogger, EvaluatorWrapper, GeneratorWrapperDeterministic, GeneratorWrapperStochastic, RandomShapeUpdateProposal}
 import scalismo.common.PointId
 import scalismo.geometry.{Point, _3D}
 import scalismo.mesh.TriangleMesh
@@ -145,14 +145,6 @@ trait GingrAlgorithm[State <: GingrRegistrationState[State]] {
     }
   }
 
-  case class emptyLogger() extends ChainStateLogger[State] {
-    override def logState(sample: State): Unit = {}
-  }
-
-  case class AcceptAllEvaluator() extends DistributionEvaluator[State] {
-    override def logValue(sample: State): Double = 0.0
-  }
-
   /**
     * Runs the actual registration with the provided configuration through the passed parameters.
     *
@@ -166,7 +158,7 @@ trait GingrAlgorithm[State <: GingrRegistrationState[State]] {
     */
   def run(
            initialState: State,
-           callBack: ChainStateLogger[State] = emptyLogger(),
+           callBack: ChainStateLogger[State] = EmptyLogger(),
            evaluatorInit: Option[DistributionEvaluator[State]] = None,
            generatorMixing: Option[ProposalGenerator[State] with TransitionProbability[State]] = None,
            probabilistic: Boolean = false
