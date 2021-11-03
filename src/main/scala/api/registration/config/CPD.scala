@@ -1,11 +1,12 @@
 package api.registration.config
 
 import api.registration.utils.PointSequenceConverter
-import api.{CorrespondencePairs, GeneralRegistrationState, GingrAlgorithm, GingrConfig, GingrRegistrationState}
-import breeze.linalg.{sum, tile, Axis, DenseMatrix, DenseVector}
+import api.sampling.GingrAlgorithm
+import api.{CorrespondencePairs, GeneralRegistrationState, GingrConfig, GingrRegistrationState}
+import breeze.linalg.{Axis, DenseMatrix, DenseVector, sum, tile}
 import scalismo.common.PointId
 import scalismo.geometry.Point.Point3DVectorizer
-import scalismo.geometry.{_3D, Point}
+import scalismo.geometry.{Point, _3D}
 import scalismo.statisticalmodel.MultivariateNormalDistribution
 
 object CPDCorrespondence {

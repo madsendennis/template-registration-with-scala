@@ -1,26 +1,20 @@
 package api
 
+import api.sampling.{EvaluatorWrapper, GeneratorWrapperDeterministic, GeneratorWrapperStochastic, RandomShapeUpdateProposal}
 import breeze.linalg.{DenseMatrix, DenseVector}
 import scalismo.common.PointId
-import scalismo.geometry.{_3D, Landmark, Point}
+import scalismo.geometry.{Landmark, Point, _3D}
 import scalismo.mesh.TriangleMesh
 import scalismo.registration.LandmarkRegistration
-import scalismo.sampling.{DistributionEvaluator, ProposalGenerator, SymmetricTransitionRatio, TransitionProbability}
 import scalismo.sampling.algorithms.MetropolisHastings
-import scalismo.sampling.loggers.{BestSampleLogger, ChainStateLogger, ChainStateLoggerContainer}
-import scalismo.statisticalmodel.{MultivariateNormalDistribution, PointDistributionModel}
-import scalismo.transformations.{
-  Scaling,
-  TranslationAfterRotation,
-  TranslationAfterRotationSpace3D,
-  TranslationAfterScalingAfterRotation,
-  TranslationAfterScalingAfterRotationSpace3D
-}
-import scalismo.utils.{Memoize, Random}
 import scalismo.sampling.loggers.ChainStateLogger.implicits._
+import scalismo.sampling.loggers.{BestSampleLogger, ChainStateLogger, ChainStateLoggerContainer}
 import scalismo.sampling.proposals.MixtureProposal
-import scalismo.sampling.proposals.MixtureProposal.ProposalGeneratorWithTransition
 import scalismo.sampling.proposals.MixtureProposal.implicits._
+import scalismo.sampling.{DistributionEvaluator, ProposalGenerator, TransitionProbability}
+import scalismo.statisticalmodel.{MultivariateNormalDistribution, PointDistributionModel}
+import scalismo.transformations._
+import scalismo.utils.{Memoize, Random}
 
 trait GlobalTranformationType
 case object SimilarityTransforms extends GlobalTranformationType
@@ -171,31 +165,33 @@ object GeneralRegistrationState {
   }
 }
 
+
+
 trait GingrAlgorithm[State <: GingrRegistrationState[State]] {
   def name: String
-  private val cashedPosterior: Memoize[State, PointDistributionModel[_3D, TriangleMesh]] =
-    Memoize(computePosterior, 3)
   val getCorrespondence: (State) => CorrespondencePairs
   val getUncertainty: (PointId, State) => MultivariateNormalDistribution
 
   private def computePosterior(current: State): PointDistributionModel[_3D, TriangleMesh] = {
-    // Get correspondence between current model instance and the target
     val correspondences = getCorrespondence(current)
-    // Add uncertainty to correspondence pairs
-    val uncertainObservationsEstimated: IndexedSeq[(PointId, Point[_3D], MultivariateNormalDistribution)] = correspondences.pairs.map { pair =>
+    val correspondencesWithUncertainty = correspondences.pairs.map { pair =>
       val (pid, point) = pair
       val uncertainty = getUncertainty(pid, current)
       (pid, point, uncertainty)
     }
-    // (Optional) Add manually assigned landmarks to observation sequence
-    val uncertainObservations: IndexedSeq[(PointId, Point[_3D], MultivariateNormalDistribution)] =
-      if (current.config.useLandmarkCorrespondence()) {
-        uncertainObservationsEstimated ++ current.general.landmarkCorrespondences
-      } else {
-        uncertainObservationsEstimated
-      }
-    current.general.model.posterior(uncertainObservations)
+
+    val observationsWithUncertainty = if (current.config.useLandmarkCorrespondence()) {
+      // note: I would propose to remove the estimated correspondences for given landmarks
+      val landmarksToUse = current.general.landmarkCorrespondences.map(_._1).toSet
+      val filteredCorrespondencesWithUncertainty = correspondencesWithUncertainty.filter{ case (pid,_,_) => !landmarksToUse.contains(pid)}
+      filteredCorrespondencesWithUncertainty ++ current.general.landmarkCorrespondences
+    } else {
+      correspondencesWithUncertainty
+    }
+    current.general.model.posterior(observationsWithUncertainty)
   }
+  private val cashedPosterior = Memoize(computePosterior, 3)
+
 
   def updateSigma2(current: State): State = {
     current
@@ -255,64 +251,9 @@ trait GingrAlgorithm[State <: GingrRegistrationState[State]] {
     model.instance(state.modelParameters).transform(state.alignment).transform(scale)
   }
 
-  case class evaluatorWrapper(probabilistic: Boolean, evaluator: Option[DistributionEvaluator[State]]) extends DistributionEvaluator[State] {
-    override def logValue(sample: State): Double = {
-      if (!probabilistic) {
-        0.0
-      } else {
-        evaluator.get.logValue(sample)
-      }
-    }
-  }
-
-  case class generatorWrapperDeterministic(generatedBy: String)(implicit rnd: Random) extends ProposalGenerator[State] with TransitionProbability[State] {
-    override def propose(current: State): State = {
-      println("Propose deterministic")
-      update(current, probabilistic = false)
-    }
-    override def logTransitionProbability(from: State, to: State): Double = {
-      0.0
-    }
-  }
-
-  case class generatorWrapperStochastic(generatedBy: String)(implicit rnd: Random) extends ProposalGenerator[State] with TransitionProbability[State] {
-    override def propose(current: State): State = {
-      println("Propose stochastic")
-      update(current, probabilistic = true)
-    }
-
-    override def logTransitionProbability(from: State, to: State): Double = {
-      val posterior = cashedPosterior(from)
-
-      val compensatedTo = from.general.modelParameters + ((to.general.modelParameters - from.general.modelParameters) / from.general.stepLength)
-      val toMesh = from.general.model.instance(compensatedTo)
-
-      val projectedTo = posterior.coefficients(toMesh)
-      posterior.gp.logpdf(projectedTo)
-    }
-  }
-
-  case class RandomShapeUpdateProposal(modelrank: Int, stdev: Double, generatedBy: String = "RandomShapeUpdateProposal")(implicit random: Random)
-    extends ProposalGenerator[State] with SymmetricTransitionRatio[State] with TransitionProbability[State] {
-
-    private val perturbationDistr = new MultivariateNormalDistribution(DenseVector.zeros(modelrank), DenseMatrix.eye[Double](modelrank) * stdev * stdev)
-
-    override def propose(theta: State): State = {
-      println("Random propose")
-      val currentCoeffs = theta.general.modelParameters
-      val updatedCoeffs = currentCoeffs + perturbationDistr.sample
-      theta.updateGeneral(theta.general.updateIteration(theta.general.iteration - 1).updateModelParameters(updatedCoeffs))
-    }
-
-    override def logTransitionProbability(from: State, to: State): Double = {
-      val residual = to.general.modelParameters - from.general.modelParameters
-      perturbationDistr.logpdf(residual)
-    }
-  }
-
   def generatorCombined(probabilistic: Boolean, modelrank: Int, mixing: Option[ProposalGenerator[State] with TransitionProbability[State]])(implicit
-    rnd: Random): ProposalGenerator[State] with TransitionProbability[State] = {
-    if (!probabilistic) generatorWrapperDeterministic(name)
+                                                                                                                                            rnd: Random): ProposalGenerator[State] with TransitionProbability[State] = {
+    if (!probabilistic) GeneratorWrapperDeterministic(update, name)
     else {
       val mix = mixing.getOrElse {
         MixtureProposal(
@@ -321,7 +262,7 @@ trait GingrAlgorithm[State <: GingrRegistrationState[State]] {
             0.05 *: RandomShapeUpdateProposal(modelrank, 0.001, generatedBy = "RandomShape-0.001")
         )
       }
-      val informedGenerator = generatorWrapperStochastic(name)
+      val informedGenerator = GeneratorWrapperStochastic(update, cashedPosterior, name)
       val totalMix = mix.map(_._1).sum
       println(s"Mixing: ${totalMix}, other ${1.0 - totalMix}")
       MixtureProposal(0.2 *: mix + 0.8 *: informedGenerator)
@@ -336,24 +277,38 @@ trait GingrAlgorithm[State <: GingrRegistrationState[State]] {
     override def logValue(sample: State): Double = 0.0
   }
 
+  /**
+    * Runs the actual registration with the provided configuration through the passed parameters.
+    *
+    * @param initialState State from which the registration is started.
+    * @param callBack Logger triggered every iteration (for sub sampling the logging, see ChainStateLogger.subSampled() ).
+    * @param evaluatorInit
+    * @param generatorMixing
+    * @param probabilistic Flag which switches between probabilistic (true) and deterministic (false)
+    * @param rnd Implicit random number generator.
+    * @return Returns the best sample of the chain given the evaluator..
+    */
   def run(
-    initialState: State,
-    callBack: ChainStateLogger[State] = emptyLogger(),
-    evaluatorInit: Option[DistributionEvaluator[State]] = None,
-    generatorMixing: Option[ProposalGenerator[State] with TransitionProbability[State]] = None,
-    probabilistic: Boolean = false // false = deterministic registration. true = probabilistic registration
-  )(implicit rnd: Random): State = {
+           initialState: State,
+           callBack: ChainStateLogger[State] = emptyLogger(),
+           evaluatorInit: Option[DistributionEvaluator[State]] = None,
+           generatorMixing: Option[ProposalGenerator[State] with TransitionProbability[State]] = None,
+           probabilistic: Boolean = false
+         )(implicit rnd: Random): State = {
     // Check that evaluator is available if probabilistic setting!
     require(true)
     val evaluator = Some(evaluatorInit.getOrElse(AcceptAllEvaluator()))
-    val registrationEvaluator = evaluatorWrapper(probabilistic, evaluator)
+    val registrationEvaluator = EvaluatorWrapper(probabilistic, evaluator)
     val registrationGenerator = generatorCombined(probabilistic, initialState.general.model.rank, generatorMixing)
     val bestSampleLogger = BestSampleLogger[State](registrationEvaluator)
     val loggers = ChainStateLoggerContainer(Seq(bestSampleLogger, callBack))
     val mhChain = MetropolisHastings[State](registrationGenerator, registrationEvaluator)
 
     val states = mhChain.iterator(initialState).loggedWith(loggers)
-    states.dropWhile(state => !state.general.converged && state.general.iteration > 0).next()
+
+    // we need to query if there is a next element, otherwise due to laziness the chain is not calculated
+    states.take(initialState.general.iteration).dropWhile(state => !state.general.converged).hasNext
+
     val fit = bestSampleLogger.currentBestSample().get
     fit
   }

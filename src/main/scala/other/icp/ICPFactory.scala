@@ -5,7 +5,7 @@ import scalismo.common.{UnstructuredPoints, Vectorizer}
 import scalismo.geometry.{NDSpace, Point}
 
 /*
- Implementation of Point Set Registration: Coherent Point Drift
+ Implementation of Point Set Registration: Iterative closest points todo: check and update rest of the comment
  In this script, only the non-rigid algorithm is implemented. Paper: https://arxiv.org/pdf/0905.2635.pdf
  A python implementation already exists from where parts of the implementation is from: https://github.com/siavashk/pycpd
  */

@@ -4,7 +4,6 @@ import java.io.File
 
 import api.{GeneralRegistrationState, NoTransforms, RigidTransforms}
 import api.registration.config.{CpdConfiguration, CpdRegistration, CpdRegistrationState, IcpConfiguration, IcpRegistration, IcpRegistrationState}
-import api.sampling.evaluators.AcceptAllEvaluator
 import scalismo.common.interpolation.NearestNeighborInterpolator
 import scalismo.geometry._3D
 import scalismo.io.{LandmarkIO, MeshIO, StatisticalModelIO}

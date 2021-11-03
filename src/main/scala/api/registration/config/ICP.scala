@@ -1,7 +1,8 @@
 package api.registration.config
 
 import api.registration.utils.NonRigidClosestPointRegistrator.ClosestPointTriangleMesh3D
-import api.{CorrespondencePairs, GeneralRegistrationState, GingrAlgorithm, GingrConfig, GingrRegistrationState, GlobalTranformationType, NoTransforms}
+import api.sampling.GingrAlgorithm
+import api.{CorrespondencePairs, GeneralRegistrationState, GingrConfig, GingrRegistrationState, GlobalTranformationType, NoTransforms}
 import breeze.linalg.{DenseMatrix, DenseVector}
 import scalismo.common.PointId
 import scalismo.statisticalmodel.MultivariateNormalDistribution
