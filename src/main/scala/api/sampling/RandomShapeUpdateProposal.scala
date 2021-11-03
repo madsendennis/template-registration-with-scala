@@ -15,25 +15,22 @@
  */package api.sampling
 
 import api.GingrRegistrationState
-import breeze.linalg.{DenseMatrix, DenseVector}
-import scalismo.sampling.{ProposalGenerator, SymmetricTransitionRatio, TransitionProbability}
-import scalismo.statisticalmodel.MultivariateNormalDistribution
+import scalismo.sampling.{ProposalGenerator, TransitionProbability, TransitionRatio}
 import scalismo.utils.Random
 
-case class RandomShapeUpdateProposal[State <: GingrRegistrationState[State]](modelrank: Int, stdev: Double, generatedBy: String = "RandomShapeUpdateProposal")(implicit random: Random)
-  extends ProposalGenerator[State] with SymmetricTransitionRatio[State] with TransitionProbability[State] {
+case class RandomShapeUpdateProposal[State <: GingrRegistrationState[State]](stdev: Double, generatedBy: String = "RandomShapeUpdateProposal")(implicit random: Random)
+  extends ProposalGenerator[State] with TransitionRatio[State] with TransitionProbability[State] {
 
-  private val perturbationDistr = new MultivariateNormalDistribution(DenseVector.zeros(modelrank), DenseMatrix.eye[Double](modelrank) * stdev * stdev)
+  private val generator = GaussianDenseVectorProposal(stdev)
 
   override def propose(theta: State): State = {
     println("Random propose")
     val currentCoeffs = theta.general.modelParameters
-    val updatedCoeffs = currentCoeffs + perturbationDistr.sample
+    val updatedCoeffs = generator.propose(currentCoeffs)
     theta.updateGeneral(theta.general.updateIteration(theta.general.iteration - 1).updateModelParameters(updatedCoeffs))
   }
 
   override def logTransitionProbability(from: State, to: State): Double = {
-    val residual = to.general.modelParameters - from.general.modelParameters
-    perturbationDistr.logpdf(residual)
+    generator.logTransitionProbability(from.general.modelParameters,to.general.modelParameters)
   }
 }

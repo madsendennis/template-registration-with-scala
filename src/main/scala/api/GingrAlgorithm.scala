@@ -85,8 +85,8 @@ trait GingrAlgorithm[State <: GingrRegistrationState[State]] {
 
     // Need to scale proposal according to "step-length"
     val globalTransform: TranslationAfterScalingAfterRotation[_3D] = current.general.globalTransformation match {
-      case SimilarityTransforms => similarityTransform(current.general.fit, newshape)
-      case RigidTransforms => rigidTransform(current.general.fit, newshape)
+      case SimilarityTransforms => estimateSimilarityTransform(current.general.fit, newshape)
+      case RigidTransforms => estimateRigidTransform(current.general.fit, newshape)
       case _ => TranslationAfterScalingAfterRotationSpace3D(Point(0, 0, 0)).identityTransformation
     }
     val alignment: TranslationAfterRotation[_3D] = TranslationAfterRotation(globalTransform.translation, globalTransform.rotation)
@@ -103,22 +103,22 @@ trait GingrAlgorithm[State <: GingrRegistrationState[State]] {
     updateSigma2(current.updateGeneral(general))
   }
 
-  def rigidTransform(current: TriangleMesh[_3D], update: IndexedSeq[(PointId, Point[_3D])]): TranslationAfterScalingAfterRotation[_3D] = {
+  def estimateRigidTransform(current: TriangleMesh[_3D], update: IndexedSeq[(PointId, Point[_3D])]): TranslationAfterScalingAfterRotation[_3D] = {
     val pairs = update.map(f => (current.pointSet.point(f._1), f._2))
     val t = LandmarkRegistration.rigid3DLandmarkRegistration(pairs, Point(0, 0, 0))
     TranslationAfterScalingAfterRotation(t.translation, Scaling(1.0), t.rotation)
   }
 
-  def rigidTransform(current: TriangleMesh[_3D], update: TriangleMesh[_3D]): TranslationAfterScalingAfterRotation[_3D] = {
+  def estimateRigidTransform(current: TriangleMesh[_3D], update: TriangleMesh[_3D]): TranslationAfterScalingAfterRotation[_3D] = {
     val t = LandmarkRegistration.rigid3DLandmarkRegistration(current.pointSet.points.toSeq.zip(update.pointSet.points.toSeq), Point(0, 0, 0))
     TranslationAfterScalingAfterRotation(t.translation, Scaling(1.0), t.rotation)
   }
 
-  def similarityTransform(current: TriangleMesh[_3D], update: IndexedSeq[(PointId, Point[_3D])]): TranslationAfterScalingAfterRotation[_3D] = {
+  def estimateSimilarityTransform(current: TriangleMesh[_3D], update: IndexedSeq[(PointId, Point[_3D])]): TranslationAfterScalingAfterRotation[_3D] = {
     val pairs = update.map(f => (current.pointSet.point(f._1), f._2))
     LandmarkRegistration.similarity3DLandmarkRegistration(pairs, Point(0, 0, 0))
   }
-  def similarityTransform(current: TriangleMesh[_3D], update: TriangleMesh[_3D]): TranslationAfterScalingAfterRotation[_3D] = {
+  def estimateSimilarityTransform(current: TriangleMesh[_3D], update: TriangleMesh[_3D]): TranslationAfterScalingAfterRotation[_3D] = {
     LandmarkRegistration.similarity3DLandmarkRegistration(current.pointSet.points.toSeq.zip(update.pointSet.points.toSeq), Point(0, 0, 0))
   }
 
@@ -133,9 +133,9 @@ trait GingrAlgorithm[State <: GingrRegistrationState[State]] {
     else {
       val mix = mixing.getOrElse {
         MixtureProposal(
-          0.05 *: RandomShapeUpdateProposal(modelrank, 0.1, generatedBy = "RandomShape-0.1") +
-            0.05 *: RandomShapeUpdateProposal(modelrank, 0.01, generatedBy = "RandomShape-0.01") +
-            0.05 *: RandomShapeUpdateProposal(modelrank, 0.001, generatedBy = "RandomShape-0.001")
+          0.05 *: RandomShapeUpdateProposal[State](0.1, generatedBy = "RandomShape-0.1") +
+            0.05 *: RandomShapeUpdateProposal[State](0.01, generatedBy = "RandomShape-0.01") +
+            0.05 *: RandomShapeUpdateProposal[State](0.001, generatedBy = "RandomShape-0.001")
         )
       }
       val informedGenerator = GeneratorWrapperStochastic(update, cashedPosterior, name)

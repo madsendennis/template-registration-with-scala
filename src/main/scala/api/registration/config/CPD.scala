@@ -1,7 +1,7 @@
 package api.registration.config
 
 import api.registration.utils.PointSequenceConverter
-import api.sampling.GingrAlgorithm
+import api.GingrAlgorithm
 import api.{CorrespondencePairs, GeneralRegistrationState, GingrConfig, GingrRegistrationState}
 import breeze.linalg.{Axis, DenseMatrix, DenseVector, sum, tile}
 import scalismo.common.PointId
