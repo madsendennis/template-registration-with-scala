@@ -1,6 +1,7 @@
 package api
 
-import api.sampling.{AcceptAllEvaluator, EmptyLogger, EvaluatorWrapper, GeneratorWrapperDeterministic, GeneratorWrapperStochastic, RandomShapeUpdateProposal}
+import api.sampling.evaluators.AcceptAllEvaluator
+import api.sampling.{EmptyLogger, EvaluatorWrapper, GeneratorWrapperDeterministic, GeneratorWrapperStochastic, RandomShapeUpdateProposal}
 import scalismo.common.PointId
 import scalismo.geometry.{Point, _3D}
 import scalismo.mesh.TriangleMesh
@@ -81,7 +82,6 @@ trait GingrAlgorithm[State <: GingrRegistrationState[State]] {
     val fit = transformedModel.instance(alpha).transform(globalTransform.scaling)
 
     val general = current.general
-      .updateIteration(current.general.iteration - 1)
       .updateFit(fit)
       .updateAlignment(alignment)
       .updateScaling(globalTransform.scaling.s)
@@ -161,7 +161,7 @@ trait GingrAlgorithm[State <: GingrRegistrationState[State]] {
     val states = mhChain.iterator(initialState).loggedWith(loggers)
 
     // we need to query if there is a next element, otherwise due to laziness the chain is not calculated
-    states.take(initialState.general.iteration).dropWhile(state => !state.general.converged).hasNext
+    states.take(initialState.general.maxIterations).dropWhile(state => !state.general.converged).hasNext
 
     val fit = bestSampleLogger.currentBestSample().get
     fit

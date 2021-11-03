@@ -7,7 +7,7 @@ import scalismo.statisticalmodel.PointDistributionModel
 import scalismo.transformations.TranslationAfterRotation
 
 trait RegistrationState[T] {
-  def iteration(): Int // Iterations left from current state
+  def maxIterations(): Int // Maximum number of iterations to take
   def model(): PointDistributionModel[_3D, TriangleMesh] // Prior statistical mesh model
   def modelParameters(): DenseVector[Double] // parameters of the current fitting state in the model
   def modelLandmarks(): Option[Seq[Landmark[_3D]]] // Landmarks on the model
@@ -33,5 +33,4 @@ trait RegistrationState[T] {
   private[api] def updateAlignment(next: TranslationAfterRotation[_3D]): T
   private[api] def updateScaling(next: Double): T
   private[api] def updateModelParameters(next: DenseVector[Double]): T
-  private[api] def updateIteration(next: Int): T
 }

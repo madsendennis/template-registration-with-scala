@@ -70,7 +70,7 @@ object CpdRegistrationState {
 
   def apply(general: GeneralRegistrationState, config: CpdConfiguration): CpdRegistrationState = {
     val newGeneral = general.copy(
-      iteration = config.maxIterations,
+      maxIterations = config.maxIterations,
       sigma2 = config.initialSigma.getOrElse(computeInitialSigma2(general.model.mean.pointSet.points.toSeq, general.target.pointSet.points.toSeq)),
       converged = false
     )

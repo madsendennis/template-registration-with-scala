@@ -13,7 +13,7 @@ case class RandomShapeUpdateProposal[State <: GingrRegistrationState[State]](std
     println("Random propose")
     val currentCoeffs = theta.general.modelParameters
     val updatedCoeffs = generator.propose(currentCoeffs)
-    theta.updateGeneral(theta.general.updateIteration(theta.general.iteration - 1).updateModelParameters(updatedCoeffs))
+    theta.updateGeneral(theta.general.updateModelParameters(updatedCoeffs))
   }
 
   override def logTransitionProbability(from: State, to: State): Double = {

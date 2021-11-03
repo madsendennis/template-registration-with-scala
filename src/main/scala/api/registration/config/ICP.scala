@@ -33,7 +33,7 @@ case class IcpRegistrationState(general: GeneralRegistrationState, config: IcpCo
 object IcpRegistrationState {
   def apply(general: GeneralRegistrationState, config: IcpConfiguration): IcpRegistrationState = {
     val newGeneral = general.copy(
-      iteration = config.maxIterations,
+      maxIterations = config.maxIterations,
       sigma2 = config.initialSigma,
       converged = false
     )

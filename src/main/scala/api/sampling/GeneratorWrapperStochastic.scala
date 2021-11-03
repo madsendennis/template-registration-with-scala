@@ -7,9 +7,8 @@ import scalismo.sampling.{ProposalGenerator, TransitionProbability}
 import scalismo.statisticalmodel.PointDistributionModel
 import scalismo.utils.{Memoize, Random}
 
-case class GeneratorWrapperStochastic[State <: GingrRegistrationState[State]](update: (State,Boolean) => State,cashedPosterior: Memoize[State, PointDistributionModel[_3D, TriangleMesh]], generatedBy: String)(implicit rnd: Random) extends ProposalGenerator[State] with TransitionProbability[State] {
+case class GeneratorWrapperStochastic[State <: GingrRegistrationState[State]](update: (State,Boolean) => State,cashedPosterior: Memoize[State, PointDistributionModel[_3D, TriangleMesh]], generatedBy: String = "InformedProposal")(implicit rnd: Random) extends ProposalGenerator[State] with TransitionProbability[State] {
   override def propose(current: State): State = {
-    println("Propose stochastic")
     update(current, true)
   }
 

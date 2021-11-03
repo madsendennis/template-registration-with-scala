@@ -37,21 +37,21 @@ object playingAround extends App {
   ui.show(targetGroup, target, "target")
 
   case class visualLogger() extends ChainStateLogger[CpdRegistrationState] {
+    var counter = 0
     override def logState(sample: CpdRegistrationState): Unit = {
-      println(s"Iteration: ${sample.general.iteration}")
+      counter += 1
+      println(s"Iteration: ${counter}/${sample.general.maxIterations}")
       modelView.shapeModelTransformationView.poseTransformationView.transformation = sample.general.alignment
       modelView.shapeModelTransformationView.shapeTransformationView.coefficients = sample.general.modelParameters
     }
   }
-
-  val callBackLogger = visualLogger()
 
   // CPD
   val configCPD = CpdConfiguration(maxIterations = 20)
   val initState: CpdRegistrationState = CpdRegistrationState(GeneralRegistrationState(model, target, transform = RigidTransforms), configCPD)
   val registratorCPD = new CpdRegistration()
   val t1 = System.nanoTime
-  val finalCPD = registratorCPD.run(initState, callBackLogger, probabilistic = true).general
+  val finalCPD = registratorCPD.run(initState, visualLogger(), probabilistic = true).general
   val duration = (System.nanoTime - t1) / 1e9d
   println(s"Registration time: ${duration}")
 
