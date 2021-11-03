@@ -1,111 +1,34 @@
-package api
+/*
+ * Copyright University of Basel, Graphics and Vision Research Group
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */package api
 
 import api.sampling.{EvaluatorWrapper, GeneratorWrapperDeterministic, GeneratorWrapperStochastic, RandomShapeUpdateProposal}
-import breeze.linalg.{DenseMatrix, DenseVector}
 import scalismo.common.PointId
-import scalismo.geometry.{Landmark, Point, _3D}
+import scalismo.geometry.{Point, _3D}
 import scalismo.mesh.TriangleMesh
 import scalismo.registration.LandmarkRegistration
 import scalismo.sampling.algorithms.MetropolisHastings
-import scalismo.sampling.loggers.ChainStateLogger.implicits._
 import scalismo.sampling.loggers.{BestSampleLogger, ChainStateLogger, ChainStateLoggerContainer}
+import scalismo.sampling.loggers.ChainStateLogger.implicits._
 import scalismo.sampling.proposals.MixtureProposal
 import scalismo.sampling.proposals.MixtureProposal.implicits._
 import scalismo.sampling.{DistributionEvaluator, ProposalGenerator, TransitionProbability}
 import scalismo.statisticalmodel.{MultivariateNormalDistribution, PointDistributionModel}
-import scalismo.transformations._
+import scalismo.transformations.{Scaling, TranslationAfterRotation, TranslationAfterScalingAfterRotation, TranslationAfterScalingAfterRotationSpace3D}
 import scalismo.utils.{Memoize, Random}
 
-trait GlobalTranformationType
-case object SimilarityTransforms extends GlobalTranformationType
-case object RigidTransforms extends GlobalTranformationType
-case object NoTransforms extends GlobalTranformationType
-
-case class CorrespondencePairs(pairs: IndexedSeq[(PointId, Point[_3D])])
-
-object CorrespondencePairs {
-  def empty(): CorrespondencePairs = new CorrespondencePairs(IndexedSeq())
-}
-
-trait RegistrationState[T] {
-  def iteration(): Int // Iterations left from current state
-  def model(): PointDistributionModel[_3D, TriangleMesh] // Prior statistical mesh model
-  def modelParameters(): DenseVector[Double] // parameters of the current fitting state in the model
-  def modelLandmarks(): Option[Seq[Landmark[_3D]]] // Landmarks on the model
-  def target(): TriangleMesh[_3D] // Target mesh
-  def targetLandmarks(): Option[Seq[Landmark[_3D]]] // Landmarks on the target
-  def fit(): TriangleMesh[_3D] // Current fit based on model parameters, global alignment and scaling
-  def alignment(): TranslationAfterRotation[_3D] // Model translation and rotation
-  def scaling(): Double = 1.0 // Model scaling
-  def converged(): Boolean // Has the registration converged???
-  def sigma2(): Double // Global uncertainty parameter
-  def threshold: Double // Convergence threshold
-  def globalTransformation(): GlobalTranformationType // Type of global transformation (none, rigid, similarity)
-  def stepLength(): Double // Step length of a single registration step (0.0 to 1.0)
-//  def probabilistic(): Boolean //
-//  def nonRigidTransformation(): Boolean
-
-  /** Updates the current state with the new fit.
-    *
-    * @param next
-    *   The newly calculated shape / fit.
-    */
-  private[api] def updateFit(next: TriangleMesh[_3D]): T
-  private[api] def updateAlignment(next: TranslationAfterRotation[_3D]): T
-  private[api] def updateScaling(next: Double): T
-  private[api] def updateModelParameters(next: DenseVector[Double]): T
-  private[api] def updateIteration(next: Int): T
-}
-
-case class GeneralRegistrationState(
-  override val model: PointDistributionModel[_3D, TriangleMesh],
-  override val modelParameters: DenseVector[Double],
-  override val modelLandmarks: Option[Seq[Landmark[_3D]]] = None,
-  override val target: TriangleMesh[_3D],
-  override val targetLandmarks: Option[Seq[Landmark[_3D]]] = None,
-  override val fit: TriangleMesh[_3D],
-  override val alignment: TranslationAfterRotation[_3D],
-  override val scaling: Double = 1.0,
-  override val converged: Boolean = false,
-  override val sigma2: Double = 1.0,
-  override val threshold: Double = 1e-10,
-  override val iteration: Int = 0,
-  override val globalTransformation: GlobalTranformationType = RigidTransforms,
-  override val stepLength: Double = 0.5
-//  override val probabilistic: Boolean = false
-//  override val nonRigidTransformation: Boolean = true
-) extends RegistrationState[GeneralRegistrationState] {
-
-  /** Updates the current state with the new fit.
-    *
-    * @param next
-    *   The newly calculated shape / fit.
-    */
-  override def updateFit(next: TriangleMesh[_3D]): GeneralRegistrationState = this.copy(fit = next)
-  override private[api] def updateAlignment(next: TranslationAfterRotation[_3D]): GeneralRegistrationState = this.copy(alignment = next)
-  override private[api] def updateScaling(next: Double): GeneralRegistrationState = this.copy(scaling = next)
-  override private[api] def updateModelParameters(next: DenseVector[Double]): GeneralRegistrationState = this.copy(modelParameters = next)
-  override private[api] def updateIteration(next: Int): GeneralRegistrationState = this.copy(iteration = next)
-
-  lazy val landmarkCorrespondences: IndexedSeq[(PointId, Point[_3D], MultivariateNormalDistribution)] = {
-    if (modelLandmarks.nonEmpty && targetLandmarks.nonEmpty) {
-      val m = modelLandmarks.get
-      val t = targetLandmarks.get
-      val commonLmNames = m.map(_.id) intersect t.map(_.id)
-      commonLmNames.map { name =>
-        val mPoint = m.find(_.id == name).get
-        val tPoint = t.find(_.id == name).get
-        (
-          model.reference.pointSet.findClosestPoint(mPoint.point).id,
-          tPoint.point,
-          mPoint.uncertainty.getOrElse(MultivariateNormalDistribution(DenseVector.zeros[Double](3), DenseMatrix.eye[Double](3)))
-        )
-      }.toIndexedSeq
-    } else {
-      IndexedSeq()
-    }
-  }
-}
 
 trait GingrConfig {
   def maxIterations(): Int
@@ -118,53 +41,6 @@ trait GingrRegistrationState[State] {
   def config: GingrConfig
   private[api] def updateGeneral(update: GeneralRegistrationState): State
 }
-
-object GeneralRegistrationState {
-//  def apply(reference: TriangleMesh[_3D], target: TriangleMesh[_3D]): GeneralRegistrationState = {
-//    val model: PointDistributionModel[_3D, TriangleMesh] = ???
-//    apply(model, target, RigidTransforms)
-//  }
-
-  def apply(model: PointDistributionModel[_3D, TriangleMesh], target: TriangleMesh[_3D]): GeneralRegistrationState = {
-    apply(model, target, RigidTransforms)
-  }
-
-  def apply(model: PointDistributionModel[_3D, TriangleMesh], target: TriangleMesh[_3D], transform: GlobalTranformationType): GeneralRegistrationState = {
-    apply(model, Seq(), target, Seq(), transform)
-  }
-
-  def apply(
-    model: PointDistributionModel[_3D, TriangleMesh],
-    modelLandmarks: Seq[Landmark[_3D]],
-    target: TriangleMesh[_3D],
-    targetLandmarks: Seq[Landmark[_3D]]
-  ): GeneralRegistrationState = {
-    apply(model, modelLandmarks, target, targetLandmarks, RigidTransforms)
-  }
-
-  def apply(
-    model: PointDistributionModel[_3D, TriangleMesh],
-    modelLandmarks: Seq[Landmark[_3D]],
-    target: TriangleMesh[_3D],
-    targetLandmarks: Seq[Landmark[_3D]],
-    transform: GlobalTranformationType
-//    nonRigidTransformation: Boolean
-  ): GeneralRegistrationState = {
-    val initial =
-      new GeneralRegistrationState(
-        model = model,
-        modelParameters = DenseVector.zeros[Double](model.rank),
-        modelLandmarks = Option(modelLandmarks),
-        target = target,
-        targetLandmarks = Option(targetLandmarks),
-        fit = model.mean,
-        alignment = TranslationAfterRotationSpace3D(Point(0, 0, 0)).identityTransformation,
-        globalTransformation = transform
-      )
-    initial
-  }
-}
-
 
 
 trait GingrAlgorithm[State <: GingrRegistrationState[State]] {
