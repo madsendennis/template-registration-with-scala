@@ -1,7 +1,7 @@
-package api.registration.cpd
+package other.api.cpd
 
 import api.registration.utils._
-import breeze.linalg.{Axis, DenseMatrix, DenseVector, diag, pinv, sum, tile, trace}
+import breeze.linalg.{diag, pinv, sum, tile, trace, Axis, DenseMatrix, DenseVector}
 import breeze.numerics.digamma
 import scalismo.common._
 import scalismo.common.interpolation.NearestNeighborInterpolator
@@ -14,19 +14,19 @@ import scalismo.transformations.TranslationAfterScalingAfterRotation
 case class BCPDParameters[D](alpha: DenseVector[Double], sigma2: Double, simTrans: SimilarityTransformParameters[D])
 
 abstract class GPMMfitting[D: NDSpace, DDomain[D] <: DiscreteDomain[D]](
-                                                                         gpmm: PointDistributionModel[D, DDomain],
-                                                                         targetPoints: Seq[Point[D]],
-                                                                         w: Double, // Outlier, [0,1]
-                                                                         lambda: Double, // Noise scaling, R+
-                                                                         gamma: Double, // Initial noise scaling, R+
-                                                                         k: Double,
-                                                                         max_iterations: Int
-                                                                       )(
-                                                                         implicit vectorizer: Vectorizer[Point[D]],
-                                                                         domainWarper: DomainWarp[D, DDomain],
-                                                                         dataConverter: PointSequenceConverter[D],
-                                                                         simTrans: TransformationHelper[D]
-                                                                       ) {
+  gpmm: PointDistributionModel[D, DDomain],
+  targetPoints: Seq[Point[D]],
+  w: Double, // Outlier, [0,1]
+  lambda: Double, // Noise scaling, R+
+  gamma: Double, // Initial noise scaling, R+
+  k: Double,
+  max_iterations: Int
+)(implicit
+  vectorizer: Vectorizer[Point[D]],
+  domainWarper: DomainWarp[D, DDomain],
+  dataConverter: PointSequenceConverter[D],
+  simTrans: TransformationHelper[D]
+) {
   println("New version using GPMM and BCPD update method")
   require(lambda > 0)
   require(gamma > 0)
@@ -41,7 +41,11 @@ abstract class GPMMfitting[D: NDSpace, DDomain[D] <: DiscreteDomain[D]](
   val Xmat: DenseMatrix[Double] = dataConverter.toMatrix(targetPoints)
   val Yvec: DenseVector[Double] = dataConverter.toVector(referencePoints)
 
-  def Registration(tolerance: Double, transformationType: GlobalTranformationType, initialGPMMpars: DenseVector[Double], initialTransformation: SimilarityTransformParameters[D]): (DenseVector[Double], SimilarityTransformParameters[D]) = {
+  def Registration(
+    tolerance: Double,
+    transformationType: GlobalTranformationType,
+    initialGPMMpars: DenseVector[Double],
+    initialTransformation: SimilarityTransformParameters[D]): (DenseVector[Double], SimilarityTransformParameters[D]) = {
     val instance = gpmm.instance(initialGPMMpars) //TODO: Add similarityTransform
     val sigma2Init = gamma * computeSigma2init(instance.pointSet.points.toSeq, targetPoints)
 
@@ -109,19 +113,19 @@ abstract class GPMMfitting[D: NDSpace, DDomain[D] <: DiscreteDomain[D]](
 }
 
 class BCPDwithGPMM[D: NDSpace, DDomain[D] <: DiscreteDomain[D]](
-                                                                 gpmm: PointDistributionModel[D, DDomain],
-                                                                 targetPoints: Seq[Point[D]],
-                                                                 w: Double, // Outlier, [0,1]
-                                                                 lambda: Double, // Noise scaling, R+
-                                                                 gamma: Double, // Initial noise scaling, R+
-                                                                 k: Double,
-                                                                 max_iterations: Int
-                                                               )(
-                                                                 implicit vectorizer: Vectorizer[Point[D]],
-                                                                 domainWarper: DomainWarp[D, DDomain],
-                                                                 dataConverter: PointSequenceConverter[D],
-                                                                 simTrans: TransformationHelper[D]
-                                                               ) extends GPMMfitting(gpmm, targetPoints, w, lambda, gamma, k, max_iterations) {
+  gpmm: PointDistributionModel[D, DDomain],
+  targetPoints: Seq[Point[D]],
+  w: Double, // Outlier, [0,1]
+  lambda: Double, // Noise scaling, R+
+  gamma: Double, // Initial noise scaling, R+
+  k: Double,
+  max_iterations: Int
+)(implicit
+  vectorizer: Vectorizer[Point[D]],
+  domainWarper: DomainWarp[D, DDomain],
+  dataConverter: PointSequenceConverter[D],
+  simTrans: TransformationHelper[D]
+) extends GPMMfitting(gpmm, targetPoints, w, lambda, gamma, k, max_iterations) {
 
   override def Iteration(gpmmPars: DenseVector[Double], pars: BCPDParameters[D], transformationType: GlobalTranformationType): (DenseVector[Double], BCPDParameters[D]) = {
     val instance = gpmm.instance(gpmmPars)
@@ -180,19 +184,18 @@ class BCPDwithGPMM[D: NDSpace, DDomain[D] <: DiscreteDomain[D]](
   }
 }
 
-
 class SpecialICPwithGPMM(
-                          gpmm: PointDistributionModel[_3D, TriangleMesh],
-                          target: TriangleMesh[_3D],
-                          w: Double, // Outlier, [0,1]
-                          lambda: Double, // Noise scaling, R+
-                          gamma: Double, // Initial noise scaling, R+
-                          k: Double,
-                          max_iterations: Int)(
-                          implicit vectorizer: Vectorizer[Point[_3D]],
-                          domainWarper: DomainWarp[_3D, TriangleMesh],
-                          dataConverter: PointSequenceConverter[_3D],
-                          simTrans: TransformationHelper[_3D]
+  gpmm: PointDistributionModel[_3D, TriangleMesh],
+  target: TriangleMesh[_3D],
+  w: Double, // Outlier, [0,1]
+  lambda: Double, // Noise scaling, R+
+  gamma: Double, // Initial noise scaling, R+
+  k: Double,
+  max_iterations: Int)(implicit
+  vectorizer: Vectorizer[Point[_3D]],
+  domainWarper: DomainWarp[_3D, TriangleMesh],
+  dataConverter: PointSequenceConverter[_3D],
+  simTrans: TransformationHelper[_3D]
 ) extends GPMMfitting(gpmm, target.pointSet.points.toSeq, w, lambda, gamma, k, max_iterations) {
 
   override def Iteration(gpmmPars: DenseVector[Double], pars: BCPDParameters[_3D], transformationType: GlobalTranformationType): (DenseVector[Double], BCPDParameters[_3D]) = {
@@ -213,9 +216,12 @@ class SpecialICPwithGPMM(
     // Update Local deformations
     val sigma2DIVs2 = pars.sigma2 / math.pow(pars.simTrans.s.s, 2)
 
-    val gpTrainingData = (closestPointsFiltered zip xhatFilteredTinv).map { case (pInfo, cp) =>
-      (pInfo._1, cp)
-    }.toIndexedSeq
+    val gpTrainingData = (closestPointsFiltered
+      .zip(xhatFilteredTinv))
+      .map { case (pInfo, cp) =>
+        (pInfo._1, cp)
+      }
+      .toIndexedSeq
     val gpmmRegression = gpmm.newReference(instance, NearestNeighborInterpolator()).posterior(gpTrainingData, lambda * sigma2DIVs2)
     val myVhat = gpmmRegression.gp.meanVector
 

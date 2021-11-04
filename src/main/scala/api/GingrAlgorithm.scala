@@ -1,21 +1,22 @@
 package api
 
-import api.sampling.evaluators.AcceptAllEvaluator
-import api.sampling.{EmptyLogger, EvaluatorWrapper, GeneratorWrapperDeterministic, GeneratorWrapperStochastic, RandomShapeUpdateProposal}
+import api.sampling.{AcceptAll, Evaluator, Generator}
+import api.sampling.evaluators.EvaluatorWrapper
+import api.sampling.loggers.{EmptyAcceptRejectLogger, EmptyChainStateLogger}
+import api.sampling.generators.{GeneratorWrapperDeterministic, GeneratorWrapperStochastic, RandomShapeUpdateProposal}
 import scalismo.common.PointId
-import scalismo.geometry.{Point, _3D}
+import scalismo.geometry.{_3D, Point}
 import scalismo.mesh.TriangleMesh
 import scalismo.registration.LandmarkRegistration
 import scalismo.sampling.algorithms.MetropolisHastings
-import scalismo.sampling.loggers.{BestSampleLogger, ChainStateLogger, ChainStateLoggerContainer}
+import scalismo.sampling.loggers.{AcceptRejectLogger, BestSampleLogger, ChainStateLogger, ChainStateLoggerContainer}
 import scalismo.sampling.loggers.ChainStateLogger.implicits._
 import scalismo.sampling.proposals.MixtureProposal
 import scalismo.sampling.proposals.MixtureProposal.implicits._
-import scalismo.sampling.{DistributionEvaluator, ProposalGenerator, TransitionProbability}
+import scalismo.sampling.{ProposalGenerator, TransitionProbability}
 import scalismo.statisticalmodel.{MultivariateNormalDistribution, PointDistributionModel}
 import scalismo.transformations.{Scaling, TranslationAfterRotation, TranslationAfterScalingAfterRotation, TranslationAfterScalingAfterRotationSpace3D}
 import scalismo.utils.{Memoize, Random}
-
 
 trait GingrConfig {
   def maxIterations(): Int
@@ -28,7 +29,6 @@ trait GingrRegistrationState[State] {
   def config: GingrConfig
   private[api] def updateGeneral(update: GeneralRegistrationState): State
 }
-
 
 trait GingrAlgorithm[State <: GingrRegistrationState[State]] {
   def name: String
@@ -46,15 +46,14 @@ trait GingrAlgorithm[State <: GingrRegistrationState[State]] {
     val observationsWithUncertainty = if (current.config.useLandmarkCorrespondence()) {
       // note: I would propose to remove the estimated correspondences for given landmarks
       val landmarksToUse = current.general.landmarkCorrespondences.map(_._1).toSet
-      val filteredCorrespondencesWithUncertainty = correspondencesWithUncertainty.filter{ case (pid,_,_) => !landmarksToUse.contains(pid)}
+      val filteredCorrespondencesWithUncertainty = correspondencesWithUncertainty.filter { case (pid, _, _) => !landmarksToUse.contains(pid) }
       filteredCorrespondencesWithUncertainty ++ current.general.landmarkCorrespondences
     } else {
       correspondencesWithUncertainty
     }
     current.general.model.posterior(observationsWithUncertainty)
   }
-  private val cashedPosterior = Memoize(computePosterior, 3)
-
+  private val cashedPosterior = Memoize(computePosterior, 10)
 
   def updateSigma2(current: State): State = {
     current
@@ -113,16 +112,12 @@ trait GingrAlgorithm[State <: GingrRegistrationState[State]] {
     model.instance(state.modelParameters).transform(state.alignment).transform(scale)
   }
 
-  def generatorCombined(probabilistic: Boolean, modelrank: Int, mixing: Option[ProposalGenerator[State] with TransitionProbability[State]])(implicit
-                                                                                                                                            rnd: Random): ProposalGenerator[State] with TransitionProbability[State] = {
+  def generatorCombined(probabilistic: Boolean, mixing: Option[ProposalGenerator[State] with TransitionProbability[State]])(implicit
+    rnd: Random): ProposalGenerator[State] with TransitionProbability[State] = {
     if (!probabilistic) GeneratorWrapperDeterministic(update, name)
     else {
       val mix = mixing.getOrElse {
-        MixtureProposal(
-          0.05 *: RandomShapeUpdateProposal[State](0.1, generatedBy = "RandomShape-0.1") +
-            0.05 *: RandomShapeUpdateProposal[State](0.01, generatedBy = "RandomShape-0.01") +
-            0.05 *: RandomShapeUpdateProposal[State](0.001, generatedBy = "RandomShape-0.001")
-        )
+        Generator().RandomShape()
       }
       val informedGenerator = GeneratorWrapperStochastic(update, cashedPosterior, name)
       val totalMix = mix.map(_._1).sum
@@ -131,34 +126,40 @@ trait GingrAlgorithm[State <: GingrRegistrationState[State]] {
     }
   }
 
-  /**
-    * Runs the actual registration with the provided configuration through the passed parameters.
+  /** Runs the actual registration with the provided configuration through the passed parameters.
     *
-    * @param initialState State from which the registration is started.
-    * @param callBack Logger triggered every iteration (for sub sampling the logging, see ChainStateLogger.subSampled() ).
-    * @param evaluatorInit
-    * @param generatorMixing
-    * @param probabilistic Flag which switches between probabilistic (true) and deterministic (false)
-    * @param rnd Implicit random number generator.
-    * @return Returns the best sample of the chain given the evaluator..
+    * @param initialState
+    *   State from which the registration is started.
+    * @param callBackLogger
+    *   Logger to provide call back functionality to user after each iteration
+    * @param acceptRejectLogger
+    * @param evaluators
+    *   Evaluator to be used if probabilistic registration is set
+    * @param generators
+    * @param probabilistic
+    *   Flag which switches between probabilistic (true) and deterministic (false)
+    * @param rnd
+    *   Implicit random number generator.
+    * @return
+    *   Returns the best sample of the chain given the evaluator..
     */
   def run(
-           initialState: State,
-           callBack: ChainStateLogger[State] = EmptyLogger(),
-           evaluatorInit: Option[DistributionEvaluator[State]] = None,
-           generatorMixing: Option[ProposalGenerator[State] with TransitionProbability[State]] = None,
-           probabilistic: Boolean = false
-         )(implicit rnd: Random): State = {
-    // Check that evaluator is available if probabilistic setting!
-    require(true)
-    val evaluator = Some(evaluatorInit.getOrElse(AcceptAllEvaluator()))
+    initialState: State,
+    callBackLogger: ChainStateLogger[State] = EmptyChainStateLogger(),
+    acceptRejectLogger: AcceptRejectLogger[State] = EmptyAcceptRejectLogger(),
+    evaluators: Option[Evaluator[State]] = None,
+    generators: Option[ProposalGenerator[State] with TransitionProbability[State]] = None,
+    probabilistic: Boolean = false
+  )(implicit rnd: Random): State = {
+    require(!probabilistic || probabilistic && evaluators.nonEmpty)
+    val evaluator = evaluators.getOrElse(AcceptAll())
     val registrationEvaluator = EvaluatorWrapper(probabilistic, evaluator)
-    val registrationGenerator = generatorCombined(probabilistic, initialState.general.model.rank, generatorMixing)
+    val registrationGenerator = generatorCombined(probabilistic, generators)
     val bestSampleLogger = BestSampleLogger[State](registrationEvaluator)
-    val loggers = ChainStateLoggerContainer(Seq(bestSampleLogger, callBack))
+    val logs = ChainStateLoggerContainer(Seq(callBackLogger, bestSampleLogger))
     val mhChain = MetropolisHastings[State](registrationGenerator, registrationEvaluator)
 
-    val states = mhChain.iterator(initialState).loggedWith(loggers)
+    val states = mhChain.iterator(initialState, acceptRejectLogger).loggedWith(logs)
 
     // we need to query if there is a next element, otherwise due to laziness the chain is not calculated
     states.take(initialState.general.maxIterations).dropWhile(state => !state.general.converged).hasNext

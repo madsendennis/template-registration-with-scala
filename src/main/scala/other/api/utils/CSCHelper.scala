@@ -1,4 +1,4 @@
-package api.registration.utils
+package other.api.utils
 
 import breeze.linalg.{CSCMatrix, DenseMatrix}
 
@@ -28,7 +28,7 @@ object CSCHelper {
       while (i < m.cols) {
         var j = m.colPtrs(i)
         while (j < m.colPtrs(i + 1)) {
-          res(offset+m.rowIndices(j), i) = m.data(j)
+          res(offset + m.rowIndices(j), i) = m.data(j)
           j += 1
         }
         i += 1
@@ -37,7 +37,6 @@ object CSCHelper {
     }
     res
   }
-
 
   def kroneckerProduct(matrix1: CSCMatrix[Double], matrix2: CSCMatrix[Double]): CSCMatrix[Double] = {
     val r1 = matrix1.rows
@@ -55,7 +54,7 @@ object CSCHelper {
         while (k < c2) {
           var l = matrix2.colPtrs(k)
           while (l < matrix2.colPtrs(k + 1)) {
-            res(r2* matrix1.rowIndices(j)+matrix2.rowIndices(l), c2*i+k) = matrix1.data(j) * matrix2.data(l)
+            res(r2 * matrix1.rowIndices(j) + matrix2.rowIndices(l), c2 * i + k) = matrix1.data(j) * matrix2.data(l)
             l += 1
           }
           k += 1

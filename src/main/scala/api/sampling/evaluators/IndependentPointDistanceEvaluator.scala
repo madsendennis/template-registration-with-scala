@@ -3,7 +3,7 @@ package api.sampling.evaluators
 import api.GingrRegistrationState
 import breeze.stats.distributions.ContinuousDistr
 import scalismo.common.{DomainWarp, PointId}
-import scalismo.geometry.{Point, _3D}
+import scalismo.geometry.{_3D, Point}
 import scalismo.mesh.{TriangleMesh, TriangleMesh3D}
 import scalismo.sampling.DistributionEvaluator
 
@@ -15,20 +15,20 @@ case object TargetToModelEvaluation extends EvaluationMode
 
 case object SymmetricEvaluation extends EvaluationMode
 
-case class IndependentPointDistanceEvaluator[State <: GingrRegistrationState[State]]
-(
+case class IndependentPointDistanceEvaluator[State <: GingrRegistrationState[State]](
   sample: State,
   likelihoodModel: ContinuousDistr[Double],
   evaluationMode: EvaluationMode,
-  numberOfPointsForComparison: Int
-)
-  extends DistributionEvaluator[State] with EvaluationCaching[State] {
+  numberOfPointsForComparison: Option[Int]
+) extends DistributionEvaluator[State] with EvaluationCaching[State] {
 
   private val instance = sample.general.fit
-  private val instanceDecimated = instance.operations.decimate(numberOfPointsForComparison)
-
   private val target = sample.general.target
-  private val targetDecimated = target.operations.decimate(numberOfPointsForComparison)
+
+  private val (instanceDecimated, targetDecimated) = numberOfPointsForComparison match {
+    case Some(num) => (instance.operations.decimate(num), target.operations.decimate(num))
+    case _ => (instance, target)
+  }
 
   private val randomPointsOnTarget: IndexedSeq[Point[_3D]] = targetDecimated.pointSet.points.toIndexedSeq
   private val randomPointIdsOnModel: IndexedSeq[PointId] = instanceDecimated.pointSet.pointIds.toIndexedSeq
@@ -41,14 +41,12 @@ case class IndependentPointDistanceEvaluator[State <: GingrRegistrationState[Sta
     dists.sum
   }
 
-
   def distTargetToModel(modelSample: TriangleMesh3D): Double = {
     val dists = for (pt <- randomPointsOnTarget) yield {
       likelihoodModel.logPdf((modelSample.operations.closestPointOnSurface(pt).point - pt).norm)
     }
     dists.sum
   }
-
 
   def computeLogValue(sample: State): Double = {
 

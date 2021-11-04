@@ -1,10 +1,10 @@
-package api.registration.utils
+package other.api.utils
 
 import scalismo.geometry.{_3D, Landmark, Point}
 import scalismo.mesh.TriangleMesh
 import scalismo.registration.LandmarkRegistration
 import scalismo.statisticalmodel.PointDistributionModel
-import scalismo.transformations.{RigidTransformation, TranslationAfterRotation}
+import scalismo.transformations.TranslationAfterRotation
 
 object AlignmentTransforms {
 

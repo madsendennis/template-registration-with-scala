@@ -1,4 +1,4 @@
-package api.registration.icp
+package other.api.icp
 
 import api.registration.utils.NonRigidClosestPointRegistrator._
 import breeze.linalg.DenseVector
@@ -10,12 +10,12 @@ import scalismo.mesh.TriangleMesh
 import scalismo.statisticalmodel.PointDistributionModel
 
 class NonRigidICPwithGPMM[D: NDSpace, DDomain[D] <: DiscreteDomain[D]](
-                                                                        val gpmm: PointDistributionModel[D, DDomain],
-                                                                        val target: DDomain[D],
-                                                                      )(
-                                                                        implicit val vectorizer: Vectorizer[Point[D]],
-                                                                        canWarp: DomainWarp[D, DDomain]
-                                                                      ) {
+  val gpmm: PointDistributionModel[D, DDomain],
+  val target: DDomain[D]
+)(implicit
+  val vectorizer: Vectorizer[Point[D]],
+  canWarp: DomainWarp[D, DDomain]
+) {
   private val initialPars = DenseVector.zeros[Double](gpmm.rank)
   private val template = gpmm.reference
   private val mindist = template.pointSet.points.toSeq.map { p => (template.pointSet.findNClosestPoints(p, 2).last.point - p).norm }.min
@@ -57,39 +57,36 @@ class NonRigidICPwithGPMM[D: NDSpace, DDomain[D] <: DiscreteDomain[D]](
   }
 }
 
-
-class NonRigidICPwithGPMMTriangle3D(gpmm: PointDistributionModel[_3D, TriangleMesh],
-                                    target: TriangleMesh[_3D]) extends NonRigidICPwithGPMM[_3D, TriangleMesh](gpmm, target) {
+class NonRigidICPwithGPMMTriangle3D(gpmm: PointDistributionModel[_3D, TriangleMesh], target: TriangleMesh[_3D]) extends NonRigidICPwithGPMM[_3D, TriangleMesh](gpmm, target) {
   override def getCorrespondence(template: TriangleMesh[_3D], target: TriangleMesh[_3D]): (Seq[(PointId, Point[_3D], Double)], Double) = {
     ClosestPointTriangleMesh3D.closestPointCorrespondence(template, target)
   }
 }
 
-class NonRigidICPwithGPMMTriangle3DNormalDirection(gpmm: PointDistributionModel[_3D, TriangleMesh],
-                                                   target: TriangleMesh[_3D]) extends NonRigidICPwithGPMM[_3D, TriangleMesh](gpmm, target) {
+class NonRigidICPwithGPMMTriangle3DNormalDirection(gpmm: PointDistributionModel[_3D, TriangleMesh], target: TriangleMesh[_3D])
+  extends NonRigidICPwithGPMM[_3D, TriangleMesh](gpmm, target) {
   override def getCorrespondence(template: TriangleMesh[_3D], target: TriangleMesh[_3D]): (Seq[(PointId, Point[_3D], Double)], Double) = {
     ClosestPointAlongNormalTriangleMesh3D.closestPointCorrespondence(template, target)
   }
 }
 
-class NonRigidICPwithGPMMUnstructuredPointsDomain3D(gpmm: PointDistributionModel[_3D, UnstructuredPointsDomain],
-                                                    target: UnstructuredPointsDomain[_3D]) extends NonRigidICPwithGPMM[_3D, UnstructuredPointsDomain](gpmm, target) {
+class NonRigidICPwithGPMMUnstructuredPointsDomain3D(gpmm: PointDistributionModel[_3D, UnstructuredPointsDomain], target: UnstructuredPointsDomain[_3D])
+  extends NonRigidICPwithGPMM[_3D, UnstructuredPointsDomain](gpmm, target) {
   override def getCorrespondence(template: UnstructuredPointsDomain[_3D], target: UnstructuredPointsDomain[_3D]): (Seq[(PointId, Point[_3D], Double)], Double) = {
     ClosestPointUnstructuredPointsDomain3D.closestPointCorrespondence(template, target)
   }
 }
 
-class NonRigidICPwithGPMMUnstructuredPointsDomain2D(gpmm: PointDistributionModel[_2D, UnstructuredPointsDomain],
-                                                    target: UnstructuredPointsDomain[_2D]) extends NonRigidICPwithGPMM[_2D, UnstructuredPointsDomain](gpmm, target) {
+class NonRigidICPwithGPMMUnstructuredPointsDomain2D(gpmm: PointDistributionModel[_2D, UnstructuredPointsDomain], target: UnstructuredPointsDomain[_2D])
+  extends NonRigidICPwithGPMM[_2D, UnstructuredPointsDomain](gpmm, target) {
   override def getCorrespondence(template: UnstructuredPointsDomain[_2D], target: UnstructuredPointsDomain[_2D]): (Seq[(PointId, Point[_2D], Double)], Double) = {
     ClosestPointUnstructuredPointsDomain2D.closestPointCorrespondence(template, target)
   }
 }
 
-class NonRigidICPwithGPMMUnstructuredPointsDomain1D(gpmm: PointDistributionModel[_1D, UnstructuredPointsDomain],
-                                                    target: UnstructuredPointsDomain[_1D]) extends NonRigidICPwithGPMM[_1D, UnstructuredPointsDomain](gpmm, target) {
+class NonRigidICPwithGPMMUnstructuredPointsDomain1D(gpmm: PointDistributionModel[_1D, UnstructuredPointsDomain], target: UnstructuredPointsDomain[_1D])
+  extends NonRigidICPwithGPMM[_1D, UnstructuredPointsDomain](gpmm, target) {
   override def getCorrespondence(template: UnstructuredPointsDomain[_1D], target: UnstructuredPointsDomain[_1D]): (Seq[(PointId, Point[_1D], Double)], Double) = {
     ClosestPointUnstructuredPointsDomain1D.closestPointCorrespondence(template, target)
   }
 }
-

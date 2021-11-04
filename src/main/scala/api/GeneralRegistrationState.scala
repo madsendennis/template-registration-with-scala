@@ -2,29 +2,29 @@ package api
 
 import breeze.linalg.{DenseMatrix, DenseVector}
 import scalismo.common.PointId
-import scalismo.geometry.{Landmark, Point, _3D}
+import scalismo.geometry.{_3D, Landmark, Point}
 import scalismo.mesh.TriangleMesh
 import scalismo.statisticalmodel.{MultivariateNormalDistribution, PointDistributionModel}
 import scalismo.transformations._
 
-
 case class GeneralRegistrationState(
-                                     override val model: PointDistributionModel[_3D, TriangleMesh],
-                                     override val modelParameters: DenseVector[Double],
-                                     override val modelLandmarks: Option[Seq[Landmark[_3D]]] = None,
-                                     override val target: TriangleMesh[_3D],
-                                     override val targetLandmarks: Option[Seq[Landmark[_3D]]] = None,
-                                     override val fit: TriangleMesh[_3D],
-                                     override val alignment: TranslationAfterRotation[_3D],
-                                     override val scaling: Double = 1.0,
-                                     override val converged: Boolean = false,
-                                     override val sigma2: Double = 1.0,
-                                     override val threshold: Double = 1e-10,
-                                     override val maxIterations: Int = 0,
-                                     override val globalTransformation: GlobalTranformationType = RigidTransforms,
-                                     override val stepLength: Double = 0.5
-                                     //  override val probabilistic: Boolean = false
-                                     //  override val nonRigidTransformation: Boolean = true
+  override val model: PointDistributionModel[_3D, TriangleMesh],
+  override val modelParameters: DenseVector[Double],
+  override val modelLandmarks: Option[Seq[Landmark[_3D]]] = None,
+  override val target: TriangleMesh[_3D],
+  override val targetLandmarks: Option[Seq[Landmark[_3D]]] = None,
+  override val fit: TriangleMesh[_3D],
+  override val alignment: TranslationAfterRotation[_3D],
+  override val scaling: Double = 1.0,
+  override val converged: Boolean = false,
+  override val sigma2: Double = 1.0,
+  override val threshold: Double = 1e-10,
+  override val maxIterations: Int = 0,
+  override val globalTransformation: GlobalTranformationType = RigidTransforms,
+  override val stepLength: Double = 1.0,
+  override val generatedBy: String = ""
+  //  override val probabilistic: Boolean = false
+  //  override val nonRigidTransformation: Boolean = true
 ) extends RegistrationState[GeneralRegistrationState] {
 
   /** Updates the current state with the new fit.
@@ -36,6 +36,7 @@ case class GeneralRegistrationState(
   override private[api] def updateAlignment(next: TranslationAfterRotation[_3D]): GeneralRegistrationState = this.copy(alignment = next)
   override private[api] def updateScaling(next: Double): GeneralRegistrationState = this.copy(scaling = next)
   override private[api] def updateModelParameters(next: DenseVector[Double]): GeneralRegistrationState = this.copy(modelParameters = next)
+  override private[api] def updateGeneratedBy(next: String): GeneralRegistrationState = this.copy(generatedBy = next)
 
   lazy val landmarkCorrespondences: IndexedSeq[(PointId, Point[_3D], MultivariateNormalDistribution)] = {
     if (modelLandmarks.nonEmpty && targetLandmarks.nonEmpty) {
@@ -102,7 +103,3 @@ object GeneralRegistrationState {
     initial
   }
 }
-
-
-
-
