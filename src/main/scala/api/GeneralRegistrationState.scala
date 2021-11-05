@@ -49,19 +49,6 @@ case class GeneralRegistrationState(
   override private[api] def updateModelParameters(next: ModelFittingParameters): GeneralRegistrationState = this.copy(modelParameters = next)
   override private[api] def updateGeneratedBy(next: String): GeneralRegistrationState = this.copy(generatedBy = next)
 
-  def rigidTransform: TranslationAfterRotation[_3D] = {
-    val translation = Translation(modelParameters.pose.translation)
-    val rotation = modelParameters.pose.rotation.rotation
-    TranslationAfterRotation(translation, rotation)
-  }
-
-  def similarityTransform: TranslationAfterScalingAfterRotation[_3D] = {
-    val translation = Translation(modelParameters.pose.translation)
-    val rotation = modelParameters.pose.rotation.rotation
-    val scaling = Scaling[_3D](modelParameters.scale.s)
-    TranslationAfterScalingAfterRotation(translation, scaling, rotation)
-  }
-
   lazy val landmarkCorrespondences: IndexedSeq[(PointId, Point[_3D], MultivariateNormalDistribution)] = {
     if (modelLandmarks.nonEmpty && targetLandmarks.nonEmpty) {
       val m = modelLandmarks.get

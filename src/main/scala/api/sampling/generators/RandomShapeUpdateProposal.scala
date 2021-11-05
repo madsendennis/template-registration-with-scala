@@ -16,6 +16,10 @@ case class RandomShapeUpdateProposal[State <: GingrRegistrationState[State]](std
   }
 
   override def logTransitionProbability(from: State, to: State): Double = {
-    generator.logTransitionProbability(from.general.modelParameters.shape.parameters, to.general.modelParameters.shape.parameters)
+    if (to.general.modelParameters.copy(shape = from.general.modelParameters.shape) != from.general.modelParameters) {
+      Double.NegativeInfinity
+    } else {
+      generator.logTransitionProbability(from.general.modelParameters.shape.parameters, to.general.modelParameters.shape.parameters)
+    }
   }
 }

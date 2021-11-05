@@ -108,7 +108,7 @@ trait GingrAlgorithm[State <: GingrRegistrationState[State]] {
   }
 
   def instance(model: PointDistributionModel[_3D, TriangleMesh], state: GeneralRegistrationState): TriangleMesh[_3D] = {
-    model.instance(state.modelParameters.shape.parameters).transform(state.similarityTransform)
+    model.instance(state.modelParameters.shape.parameters).transform(state.modelParameters.similarityTransform)
   }
 
   def generatorCombined(probabilistic: Boolean, mixing: Option[ProposalGenerator[State] with TransitionProbability[State]])(implicit

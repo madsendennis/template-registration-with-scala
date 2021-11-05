@@ -28,18 +28,18 @@ case class GaussianAxisRotationProposal[State <: GingrRegistrationState[State]](
   }
 
   override def logTransitionProbability(from: State, to: State): Double = {
-//    if (to.copy(poseParameters = to.poseParameters.copy(rotation = from.poseParameters.rotation)).allParameters != from.allParameters) {
-//      Double.NegativeInfinity
-//    } else {
-    val rotParamsFrom = from.general.modelParameters.pose.rotation.angles
-    val rotParamsTo = to.general.modelParameters.pose.rotation.angles
-    val residual = axis match {
-      case RollAxis => rotParamsTo.phi - rotParamsFrom.phi
-      case PitchAxis => rotParamsTo.theta - rotParamsFrom.theta
-      case YawAxis => rotParamsTo.psi - rotParamsFrom.psi
+    if (to.general.modelParameters.copy(pose = to.general.modelParameters.pose.copy(rotation = from.general.modelParameters.pose.rotation)) != from.general.modelParameters) {
+      Double.NegativeInfinity
+    } else {
+      val rotParamsFrom = from.general.modelParameters.pose.rotation.angles
+      val rotParamsTo = to.general.modelParameters.pose.rotation.angles
+      val residual = axis match {
+        case RollAxis => rotParamsTo.phi - rotParamsFrom.phi
+        case PitchAxis => rotParamsTo.theta - rotParamsFrom.theta
+        case YawAxis => rotParamsTo.psi - rotParamsFrom.psi
+      }
+      perturbationDistr.logPdf(residual)
     }
-    perturbationDistr.logPdf(residual)
-//    }
   }
 }
 
@@ -62,11 +62,11 @@ case class GaussianAxisTranslationProposal[State <: GingrRegistrationState[State
   }
 
   override def logTransitionProbability(from: State, to: State): Double = {
-//    if (to.copy(poseParameters = to.poseParameters.copy(translation = from.poseParameters.translation)).allParameters != from.allParameters) {
-//      Double.NegativeInfinity
-//    } else {
-    val residual = to.general.modelParameters.pose.translation(axis) - from.general.modelParameters.pose.translation(axis)
-    perturbationDistr.logPdf(residual)
-//    }
+    if (to.general.modelParameters.copy(pose = to.general.modelParameters.pose.copy(translation = from.general.modelParameters.pose.translation)) != from.general.modelParameters) {
+      Double.NegativeInfinity
+    } else {
+      val residual = to.general.modelParameters.pose.translation(axis) - from.general.modelParameters.pose.translation(axis)
+      perturbationDistr.logPdf(residual)
+    }
   }
 }

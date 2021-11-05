@@ -57,7 +57,7 @@ object playingAround extends App {
       if (counter % 10 == 0) {
         println(s"Iteration: ${counter}/${sample.general.maxIterations}")
         jsonLogger.printAcceptInfo()
-        modelView.shapeModelTransformationView.poseTransformationView.transformation = sample.general.rigidTransform
+        modelView.shapeModelTransformationView.poseTransformationView.transformation = sample.general.modelParameters.rigidTransform
         modelView.shapeModelTransformationView.shapeTransformationView.coefficients = sample.general.modelParameters.shape.parameters
       }
     }

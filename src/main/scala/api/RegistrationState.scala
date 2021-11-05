@@ -6,37 +6,6 @@ import scalismo.mesh.TriangleMesh
 import scalismo.statisticalmodel.PointDistributionModel
 import scalismo.transformations.{Rotation, RotationSpace3D, Translation, TranslationAfterRotation}
 
-case class ScaleParameter(s: Double) {
-  def parameters: DenseVector[Double] = DenseVector(s)
-}
-
-case class EulerAngles(phi: Double, theta: Double, psi: Double) {
-  def parameters: DenseVector[Double] = DenseVector(phi, theta, psi)
-}
-
-case class EulerRotation(angles: EulerAngles, center: Point[_3D]) {
-  val rotation: Rotation[_3D] = Rotation(angles.phi, angles.theta, angles.psi, center)
-  def parameters: DenseVector[Double] = DenseVector.vertcat(angles.parameters, center.toBreezeVector)
-}
-
-case class PoseParameters(translation: EuclideanVector[_3D], rotation: EulerRotation) {
-  def parameters: DenseVector[Double] = {
-    DenseVector.vertcat(
-      DenseVector.vertcat(
-        translation.toBreezeVector,
-        rotation.parameters
-      )
-    )
-  }
-}
-
-case class ShapeParameters(parameters: DenseVector[Double])
-
-case class ModelFittingParameters(scale: ScaleParameter, pose: PoseParameters, shape: ShapeParameters, generatedBy: String = "Anonymous") {
-  val allParameters: DenseVector[Double] = DenseVector.vertcat(scale.parameters, pose.parameters, shape.parameters)
-
-}
-
 trait RegistrationState[T] {
   def maxIterations(): Int // Maximum number of iterations to take
   def model(): PointDistributionModel[_3D, TriangleMesh] // Prior statistical mesh model
