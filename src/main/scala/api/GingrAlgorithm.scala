@@ -64,7 +64,7 @@ trait GingrAlgorithm[State <: GingrRegistrationState[State]] {
     val shapeproposal = if (!probabilistic) posterior.mean else posterior.sample()
 
     val newCoefficients = current.general.model.coefficients(shapeproposal)
-    val currentShapeCoefficients = current.general.modelParameters
+    val currentShapeCoefficients = current.general.modelParameters.shape.parameters
     val newShapeCoefficients = currentShapeCoefficients + (newCoefficients - currentShapeCoefficients) * current.general.stepLength
 
     val newshape = current.general.model.instance(newShapeCoefficients)
@@ -79,12 +79,12 @@ trait GingrAlgorithm[State <: GingrRegistrationState[State]] {
     val transformedModel = current.general.model.transform(alignment)
     val alpha = transformedModel.coefficients(newshape)
     val fit = transformedModel.instance(alpha).transform(globalTransform.scaling)
-
     val general = current.general
       .updateFit(fit)
-      .updateAlignment(alignment)
-      .updateScaling(globalTransform.scaling.s)
-      .updateModelParameters(alpha)
+      .updateTranslation(alignment.translation.t)
+      .updateRotation(alignment.rotation)
+      .updateScaling(ScaleParameter(globalTransform.scaling.s))
+      .updateShapeParameters(ShapeParameters(alpha))
     updateSigma2(current.updateGeneral(general))
   }
 
@@ -108,8 +108,7 @@ trait GingrAlgorithm[State <: GingrRegistrationState[State]] {
   }
 
   def instance(model: PointDistributionModel[_3D, TriangleMesh], state: GeneralRegistrationState): TriangleMesh[_3D] = {
-    val scale = Scaling[_3D](state.scaling)
-    model.instance(state.modelParameters).transform(state.alignment).transform(scale)
+    model.instance(state.modelParameters.shape.parameters).transform(state.similarityTransform)
   }
 
   def generatorCombined(probabilistic: Boolean, mixing: Option[ProposalGenerator[State] with TransitionProbability[State]])(implicit

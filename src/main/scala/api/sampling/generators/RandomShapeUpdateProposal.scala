@@ -1,6 +1,6 @@
 package api.sampling.generators
 
-import api.GingrRegistrationState
+import api.{GingrRegistrationState, ShapeParameters}
 import scalismo.sampling.{ProposalGenerator, TransitionProbability, TransitionRatio}
 import scalismo.utils.Random
 
@@ -10,12 +10,12 @@ case class RandomShapeUpdateProposal[State <: GingrRegistrationState[State]](std
   private val generator = GaussianDenseVectorProposal(stdev)
 
   override def propose(theta: State): State = {
-    val currentCoeffs = theta.general.modelParameters
+    val currentCoeffs = theta.general.modelParameters.shape.parameters
     val updatedCoeffs = generator.propose(currentCoeffs)
-    theta.updateGeneral(theta.general.updateModelParameters(updatedCoeffs).updateGeneratedBy(generatedBy))
+    theta.updateGeneral(theta.general.updateShapeParameters(ShapeParameters(updatedCoeffs)).updateGeneratedBy(generatedBy))
   }
 
   override def logTransitionProbability(from: State, to: State): Double = {
-    generator.logTransitionProbability(from.general.modelParameters, to.general.modelParameters)
+    generator.logTransitionProbability(from.general.modelParameters.shape.parameters, to.general.modelParameters.shape.parameters)
   }
 }

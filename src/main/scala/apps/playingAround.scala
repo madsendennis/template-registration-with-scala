@@ -54,10 +54,12 @@ object playingAround extends App {
     var counter = 0
     override def logState(sample: CpdRegistrationState): Unit = {
       counter += 1
-      if (counter % 10 == 0) jsonLogger.printAcceptInfo()
-      println(s"Iteration: ${counter}/${sample.general.maxIterations}")
-      modelView.shapeModelTransformationView.poseTransformationView.transformation = sample.general.alignment
-      modelView.shapeModelTransformationView.shapeTransformationView.coefficients = sample.general.modelParameters
+      if (counter % 10 == 0) {
+        println(s"Iteration: ${counter}/${sample.general.maxIterations}")
+        jsonLogger.printAcceptInfo()
+        modelView.shapeModelTransformationView.poseTransformationView.transformation = sample.general.rigidTransform
+        modelView.shapeModelTransformationView.shapeTransformationView.coefficients = sample.general.modelParameters.shape.parameters
+      }
     }
   }
 

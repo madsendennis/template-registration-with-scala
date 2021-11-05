@@ -86,11 +86,11 @@ case class JSONStateLogger[State <: GingrRegistrationState[State]](evaluators: E
       identifier(sample),
       evalValue,
       status = true,
-      sample.general.modelParameters.toArray.toSeq,
-      sample.general.alignment.translation.parameters.toArray.toSeq,
-      sample.general.alignment.rotation.parameters.toArray.toSeq,
-      sample.general.alignment.rotation.center.toArray.toSeq,
-      sample.general.scaling,
+      sample.general.modelParameters.shape.parameters.toArray.toSeq,
+      sample.general.modelParameters.pose.translation.toArray.toSeq,
+      sample.general.modelParameters.pose.rotation.angles.parameters.toArray.toSeq,
+      sample.general.modelParameters.pose.rotation.center.toBreezeVector.toArray.toSeq,
+      sample.general.modelParameters.scale.s,
       datetimeFormat.format(Calendar.getInstance().getTime)
     )
     numOfAccepted += 1
@@ -108,7 +108,7 @@ case class JSONStateLogger[State <: GingrRegistrationState[State]](evaluators: E
       Seq(),
       Seq(),
       Seq(),
-      sample.general.scaling,
+      sample.general.modelParameters.scale.s,
       datetimeFormat.format(Calendar.getInstance().getTime)
     )
     numOfRejected += 1
@@ -135,14 +135,17 @@ case class JSONStateLogger[State <: GingrRegistrationState[State]](evaluators: E
   }
 
   def printAcceptInfo(id: String = ""): Unit = {
+    val lastX = 100
     println(s"${id} Total accepted (${totalSamples}): ${percentAccepted}")
     generatedBy.foreach { name =>
       println(s"${id} ${name}: ${percentAcceptedOfType(name)}")
     }
-    val logLast100 = log.takeRight(100)
-    println(s"${id} Last 100 samples accepted (${100}): ${logLast100.map(f => if (f.status) 1.0 else .0).sum / 100.0}")
-    generatedBy.foreach { name =>
-      println(s"${id} ${name}: ${percentAcceptedOfTypeLocal(name, logLast100)}")
+    if (log.length > lastX) {
+      val logLastX = log.takeRight(lastX)
+      println(s"${id} Last ${lastX} samples accepted (${lastX}): ${logLastX.map(f => if (f.status) 1.0 else .0).sum / lastX.toDouble}")
+      generatedBy.foreach { name =>
+        println(s"${id} ${name}: ${percentAcceptedOfTypeLocal(name, logLastX)}")
+      }
     }
   }
 

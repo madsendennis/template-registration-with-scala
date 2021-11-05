@@ -20,7 +20,8 @@ case class GeneratorWrapperStochastic[State <: GingrRegistrationState[State]](
   override def logTransitionProbability(from: State, to: State): Double = {
     val posterior = cashedPosterior(from)
 
-    val compensatedTo = from.general.modelParameters + ((to.general.modelParameters - from.general.modelParameters) / from.general.stepLength)
+    val compensatedTo =
+      from.general.modelParameters.shape.parameters + ((to.general.modelParameters.shape.parameters - from.general.modelParameters.shape.parameters) / from.general.stepLength)
     val toMesh = from.general.model.instance(compensatedTo)
 
     val projectedTo = posterior.coefficients(toMesh)

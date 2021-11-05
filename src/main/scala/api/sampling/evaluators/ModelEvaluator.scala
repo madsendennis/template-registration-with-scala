@@ -9,6 +9,6 @@ case class ModelEvaluator[State <: GingrRegistrationState[State]](modelrank: Int
   val mvnormal: MultivariateNormalDistribution = MultivariateNormalDistribution(DenseVector.zeros[Double](modelrank), diag(DenseVector.ones[Double](modelrank)))
 
   override def logValue(theta: State): Double = {
-    mvnormal.logpdf(theta.general.modelParameters)
+    mvnormal.logpdf(theta.general.modelParameters.shape.parameters)
   }
 }
