@@ -116,11 +116,9 @@ trait GingrAlgorithm[State <: GingrRegistrationState[State]] {
     if (!probabilistic) GeneratorWrapperDeterministic(update, name)
     else {
       val mix = mixing.getOrElse {
-        Generator().RandomShape()
+        Generator().DefaultRandom()
       }
       val informedGenerator = GeneratorWrapperStochastic(update, cashedPosterior, name)
-      val totalMix = mix.map(_._1).sum
-      println(s"Mixing: ${totalMix}, other ${1.0 - totalMix}")
       MixtureProposal(0.2 *: mix + 0.8 *: informedGenerator)
     }
   }
