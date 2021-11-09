@@ -18,6 +18,10 @@ import scalismo.statisticalmodel.{MultivariateNormalDistribution, PointDistribut
 import scalismo.transformations.{Scaling, TranslationAfterRotation, TranslationAfterScalingAfterRotation, TranslationAfterScalingAfterRotationSpace3D}
 import scalismo.utils.{Memoize, Random}
 
+case class ProbabilisticSettings[State <: GingrRegistrationState[State]](evaluators: Evaluator[State], randomMixture: Double = 0.2) {
+  require(randomMixture >= 0.0 && randomMixture <= 1.0)
+}
+
 trait GingrConfig {
   def maxIterations(): Int
   def converged: (GeneralRegistrationState, GeneralRegistrationState) => Boolean
@@ -111,15 +115,14 @@ trait GingrAlgorithm[State <: GingrRegistrationState[State]] {
     model.instance(state.modelParameters.shape.parameters).transform(state.modelParameters.similarityTransform)
   }
 
-  def generatorCombined(probabilistic: Boolean, mixing: Option[ProposalGenerator[State] with TransitionProbability[State]])(implicit
+  def generatorCombined(probabilisticSettings: Option[ProbabilisticSettings[State]], mixing: Option[ProposalGenerator[State] with TransitionProbability[State]])(implicit
     rnd: Random): ProposalGenerator[State] with TransitionProbability[State] = {
-    if (!probabilistic) GeneratorWrapperDeterministic(update, name)
-    else {
-      val mix = mixing.getOrElse {
-        Generator().DefaultRandom()
-      }
-      val informedGenerator = GeneratorWrapperStochastic(update, cashedPosterior, name)
-      MixtureProposal(0.2 *: mix + 0.8 *: informedGenerator)
+    probabilisticSettings match {
+      case Some(setting) =>
+        val mix = mixing.getOrElse(Generator().DefaultRandom()) // Use passed in generator or use default random generator to mix with
+        val informedGenerator = GeneratorWrapperStochastic(update, cashedPosterior, name)
+        MixtureProposal(setting.randomMixture *: mix + (1.0 - setting.randomMixture) *: informedGenerator)
+      case _ => GeneratorWrapperDeterministic(update, name)
     }
   }
 
@@ -130,11 +133,10 @@ trait GingrAlgorithm[State <: GingrRegistrationState[State]] {
     * @param callBackLogger
     *   Logger to provide call back functionality to user after each iteration
     * @param acceptRejectLogger
-    * @param evaluators
+    * @param probabilisticSettings
     *   Evaluator to be used if probabilistic registration is set
     * @param generators
-    * @param probabilistic
-    *   Flag which switches between probabilistic (true) and deterministic (false)
+    *   Pass in external generators to use
     * @param rnd
     *   Implicit random number generator.
     * @return
@@ -144,14 +146,12 @@ trait GingrAlgorithm[State <: GingrRegistrationState[State]] {
     initialState: State,
     callBackLogger: ChainStateLogger[State] = EmptyChainStateLogger(),
     acceptRejectLogger: AcceptRejectLogger[State] = EmptyAcceptRejectLogger(),
-    evaluators: Option[Evaluator[State]] = None,
-    generators: Option[ProposalGenerator[State] with TransitionProbability[State]] = None,
-    probabilistic: Boolean = false
+    probabilisticSettings: Option[ProbabilisticSettings[State]],
+    generators: Option[ProposalGenerator[State] with TransitionProbability[State]] = None
   )(implicit rnd: Random): State = {
-    require(!probabilistic || probabilistic && evaluators.nonEmpty)
-    val evaluator = evaluators.getOrElse(AcceptAll())
-    val registrationEvaluator = EvaluatorWrapper(probabilistic, evaluator)
-    val registrationGenerator = generatorCombined(probabilistic, generators)
+    val evaluator = probabilisticSettings.getOrElse(ProbabilisticSettings(AcceptAll(), randomMixture = 0.0))
+    val registrationEvaluator = EvaluatorWrapper(probabilisticSettings.nonEmpty, evaluator.evaluators)
+    val registrationGenerator = generatorCombined(probabilisticSettings, generators)
     val bestSampleLogger = BestSampleLogger[State](registrationEvaluator)
     val logs = ChainStateLoggerContainer(Seq(callBackLogger, bestSampleLogger))
     val mhChain = MetropolisHastings[State](registrationGenerator, registrationEvaluator)

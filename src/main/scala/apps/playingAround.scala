@@ -2,7 +2,7 @@ package apps
 
 import java.io.File
 
-import api.{GeneralRegistrationState, NoTransforms, RigidTransforms}
+import api.{GeneralRegistrationState, GingrRegistrationState, NoTransforms, ProbabilisticSettings, RigidTransforms}
 import api.registration.config.{CpdConfiguration, CpdRegistration, CpdRegistrationState, IcpConfiguration, IcpRegistration, IcpRegistrationState}
 import api.sampling.IndependtPoints
 import api.sampling.evaluators.{IndependentPointDistanceEvaluator, ModelToTargetEvaluation}
@@ -41,7 +41,7 @@ object playingAround extends App {
   ui.show(targetGroup, target, "target")
 
   // CPD
-  val configCPD = CpdConfiguration(maxIterations = 100)
+  val configCPD = CpdConfiguration(maxIterations = 10000)
   val initState: CpdRegistrationState = CpdRegistrationState(GeneralRegistrationState(model, target, transform = RigidTransforms), configCPD)
   val registratorCPD = new CpdRegistration()
   val t1 = System.nanoTime
@@ -50,12 +50,12 @@ object playingAround extends App {
 
   val jsonLogger = JSONStateLogger(myEval)
 
-  case class visualLogger() extends ChainStateLogger[CpdRegistrationState] {
+  case class visualLogger[State <: GingrRegistrationState[State]]() extends ChainStateLogger[State] {
     var counter = 0
-    override def logState(sample: CpdRegistrationState): Unit = {
+    override def logState(sample: State): Unit = {
       counter += 1
       if (counter % 10 == 0) {
-        println(s"Iteration: ${counter}/${sample.general.maxIterations}")
+        println(s"Iteration: ${counter}/${sample.general.maxIterations} - Sigma: ${sample.general.sigma2}")
         jsonLogger.printAcceptInfo()
         modelView.shapeModelTransformationView.poseTransformationView.transformation = sample.general.modelParameters.rigidTransform
         modelView.shapeModelTransformationView.shapeTransformationView.coefficients = sample.general.modelParameters.shape.parameters
@@ -63,7 +63,9 @@ object playingAround extends App {
     }
   }
 
-  val finalCPD = registratorCPD.run(initState, callBackLogger = visualLogger(), acceptRejectLogger = jsonLogger, evaluators = Some(myEval), probabilistic = true)
+  val probSetting = ProbabilisticSettings(myEval)
+
+  val finalCPD = registratorCPD.run(initState, callBackLogger = visualLogger(), acceptRejectLogger = jsonLogger, probabilisticSettings = Some(probSetting))
   val duration = (System.nanoTime - t1) / 1e9d
   println(s"Registration time: ${duration}")
 
