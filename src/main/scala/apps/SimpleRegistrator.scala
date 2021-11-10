@@ -66,7 +66,7 @@ class SimpleRegistrator[State <: GingrRegistrationState[State], Algorithm <: Gin
       acceptRejectLogger = jsonLogger,
       probabilisticSettings = if (probabilistic) Some(ProbabilisticSettings[State](evaluator)) else None
     )
-    val fit = finalState.general.fit
+    val fit = ModelFittingParameters.modelInstanceShapePoseScale(model, finalState.general.modelParameters)
 
     ui.show(finalGroup, fit, "fit")
     RegistrationComparison.evaluateReconstruction2GroundTruthBoundaryAware("", fit, target)

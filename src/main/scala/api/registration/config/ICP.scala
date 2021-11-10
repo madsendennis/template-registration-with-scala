@@ -17,13 +17,13 @@ object ICPCorrespondence {
 
 case class IcpConfiguration(
   override val maxIterations: Int = 100,
+  override val threshold: Double = 1e-5,
   override val converged: (GeneralRegistrationState, GeneralRegistrationState) => Boolean = (last: GeneralRegistrationState, current: GeneralRegistrationState) => false,
   override val useLandmarkCorrespondence: Boolean = true,
   initialSigma: Double = 100.0,
   endSigma: Double = 1.0
 ) extends GingrConfig {
   val sigmaStep: Double = (initialSigma - endSigma) / maxIterations.toDouble
-
 }
 
 case class IcpRegistrationState(general: GeneralRegistrationState, config: IcpConfiguration) extends GingrRegistrationState[IcpRegistrationState] {
@@ -33,9 +33,9 @@ case class IcpRegistrationState(general: GeneralRegistrationState, config: IcpCo
 object IcpRegistrationState {
   def apply(general: GeneralRegistrationState, config: IcpConfiguration): IcpRegistrationState = {
     val newGeneral = general.copy(
-      maxIterations = config.maxIterations,
-      sigma2 = config.initialSigma,
-      converged = false
+//      maxIterations = config.maxIterations,
+      sigma2 = config.initialSigma
+//      converged = false
     )
     new IcpRegistrationState(
       newGeneral,

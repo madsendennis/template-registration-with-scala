@@ -14,10 +14,7 @@ case class GeneralRegistrationState(
   override val target: TriangleMesh[_3D],
   override val targetLandmarks: Option[Seq[Landmark[_3D]]] = None,
   override val fit: TriangleMesh[_3D],
-  override val converged: Boolean = false,
   override val sigma2: Double = 1.0,
-  override val threshold: Double = 1e-10,
-  override val maxIterations: Int = 0,
   override val globalTransformation: GlobalTranformationType = RigidTransforms,
   override val stepLength: Double = 1.0,
   override val generatedBy: String = ""

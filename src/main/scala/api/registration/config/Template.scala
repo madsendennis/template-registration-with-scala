@@ -7,6 +7,7 @@ import scalismo.statisticalmodel.MultivariateNormalDistribution
 
 case class TemplateConfiguration(
   override val maxIterations: Int = 1,
+  override val threshold: Double = 1e-5,
   override val converged: (GeneralRegistrationState, GeneralRegistrationState) => Boolean = (last: GeneralRegistrationState, current: GeneralRegistrationState) => false,
   override val useLandmarkCorrespondence: Boolean = true
 ) extends GingrConfig {}
@@ -17,12 +18,8 @@ case class TemplateRegistrationState(general: GeneralRegistrationState, config: 
 
 object TemplateRegistrationState {
   def apply(general: GeneralRegistrationState, config: TemplateConfiguration): TemplateRegistrationState = {
-    val newGeneral = general.copy(
-      maxIterations = config.maxIterations,
-      converged = false
-    )
     new TemplateRegistrationState(
-      newGeneral,
+      general,
       config
     )
   }

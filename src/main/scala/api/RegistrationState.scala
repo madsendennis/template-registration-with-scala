@@ -7,24 +7,16 @@ import scalismo.statisticalmodel.PointDistributionModel
 import scalismo.transformations.{Rotation, RotationSpace3D, Translation, TranslationAfterRotation}
 
 trait RegistrationState[T] {
-  def maxIterations(): Int // Maximum number of iterations to take
   def model(): PointDistributionModel[_3D, TriangleMesh] // Prior statistical mesh model
   def modelParameters(): ModelFittingParameters // parameters of the current fitting state in the model
   def modelLandmarks(): Option[Seq[Landmark[_3D]]] // Landmarks on the model
   def target(): TriangleMesh[_3D] // Target mesh
   def targetLandmarks(): Option[Seq[Landmark[_3D]]] // Landmarks on the target
   def fit(): TriangleMesh[_3D] // Current fit based on model parameters, global alignment and scaling
-//  def translation(): Translation[_3D] // Model translation and rotation
-//  def rotation(): Rotation[_3D] // Model translation and rotation
-//  def scaling(): Double // Model scaling
-  def converged(): Boolean // Has the registration converged???
   def sigma2(): Double // Global uncertainty parameter
-  def threshold: Double // Convergence threshold
   def globalTransformation(): GlobalTranformationType // Type of global transformation (none, rigid, similarity)
   def stepLength(): Double // Step length of a single registration step (0.0 to 1.0)
   def generatedBy(): String // Name of generator that produced the State
-//  def probabilistic(): Boolean //
-//  def nonRigidTransformation(): Boolean
 
   /** Updates the current state with the new fit.
     *

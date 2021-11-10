@@ -24,6 +24,7 @@ case class ProbabilisticSettings[State <: GingrRegistrationState[State]](evaluat
 
 trait GingrConfig {
   def maxIterations(): Int
+  def threshold(): Double
   def converged: (GeneralRegistrationState, GeneralRegistrationState) => Boolean
   def useLandmarkCorrespondence(): Boolean
 }
@@ -89,6 +90,7 @@ trait GingrAlgorithm[State <: GingrRegistrationState[State]] {
     val transformedModel = current.general.model.transform(newGlobalAlignment)
     val alpha = transformedModel.coefficients(newshape)
 
+    current.config.converged
     val general = current.general
       .updateTranslation(newGlobalAlignment.translation.t)
       .updateRotation(newGlobalAlignment.rotation)
@@ -166,7 +168,7 @@ trait GingrAlgorithm[State <: GingrRegistrationState[State]] {
 
     // we need to query if there is a next element, otherwise due to laziness the chain is not calculated
     // TODO: Converge only when in deterministic mode!!!
-    states.take(initialState.general.maxIterations).dropWhile(state => !state.general.converged).hasNext
+    states.take(initialState.config.maxIterations()).dropWhile(state => true).hasNext
 
     // If probabilistic: select the sample with the best posterior value. If deterministic: select the last sample.
     val fit = probabilisticSettings match {

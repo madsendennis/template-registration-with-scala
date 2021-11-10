@@ -16,7 +16,7 @@ object CallBackFunctions {
     override def logState(sample: State): Unit = {
       counter += 1
       if (counter % updateFrequency == 0 && counter > 1) {
-        println(s"Iteration: ${counter}/${sample.general.maxIterations} - Sigma: ${sample.general.sigma2}")
+        println(s"Iteration: ${counter}/${sample.config.maxIterations()} - Sigma: ${sample.general.sigma2}")
         jsonLogger.foreach(_.printAcceptInfo())
         modelView.shapeModelTransformationView.poseTransformationView.transformation = sample.general.modelParameters.rigidTransform
         modelView.shapeModelTransformationView.shapeTransformationView.coefficients = sample.general.modelParameters.shape.parameters

@@ -70,9 +70,7 @@ object CpdRegistrationState {
 
   def apply(general: GeneralRegistrationState, config: CpdConfiguration): CpdRegistrationState = {
     val newGeneral = general.copy(
-      maxIterations = config.maxIterations,
-      sigma2 = config.initialSigma.getOrElse(computeInitialSigma2(general.model.mean.pointSet.points.toSeq, general.target.pointSet.points.toSeq)),
-      converged = false
+      sigma2 = config.initialSigma.getOrElse(computeInitialSigma2(general.model.mean.pointSet.points.toSeq, general.target.pointSet.points.toSeq))
     )
     new CpdRegistrationState(
       newGeneral,
@@ -83,10 +81,12 @@ object CpdRegistrationState {
 
 case class CpdConfiguration(
   override val maxIterations: Int = 100,
+  override val threshold: Double = 1e-5,
   override val converged: (GeneralRegistrationState, GeneralRegistrationState) => Boolean = (last: GeneralRegistrationState, current: GeneralRegistrationState) => {
-    val minSigma = last.sigma2 - current.sigma2
-    println(s"Sigmas: ${minSigma}, ${last.sigma2 - current.sigma2 < current.threshold}")
-    last.sigma2 - current.sigma2 < current.threshold
+//    val minSigma = last.sigma2 - current.sigma2
+//    println(s"Sigmas: ${minSigma}, ${last.sigma2 - current.sigma2 < current.threshold}")
+//    last.sigma2 - current.sigma2 < current.threshold
+    false
   },
   override val useLandmarkCorrespondence: Boolean = true,
   initialSigma: Option[Double] = None,
