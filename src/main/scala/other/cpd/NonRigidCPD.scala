@@ -1,16 +1,20 @@
 package other.cpd
 
 import api.registration.utils.PointSequenceConverter
-import breeze.linalg.{Axis, DenseMatrix, DenseVector, diag, inv, sum}
+import breeze.linalg.{diag, inv, sum, Axis, DenseMatrix, DenseVector}
 import scalismo.common.Vectorizer
 import scalismo.geometry.{NDSpace, Point}
 
+/*
+ Implementation of Point Set Registration: Coherent Point Drift (CPD) - Non-Rigid algorithm
+ Paper: https://arxiv.org/pdf/0905.2635.pdf
+ */
 private[cpd] class NonRigidCPD[D: NDSpace](
-    override val targetPoints: Seq[Point[D]],
-    override val cpd: CPDFactory[D]
-)(
-    implicit vectorizer: Vectorizer[Point[D]],
-    dataConverter: PointSequenceConverter[D]
+  override val targetPoints: Seq[Point[D]],
+  override val cpd: CPDFactory[D]
+)(implicit
+  vectorizer: Vectorizer[Point[D]],
+  dataConverter: PointSequenceConverter[D]
 ) extends RigidCPD[D](targetPoints, cpd) {
   import cpd._
 
@@ -31,10 +35,10 @@ private[cpd] class NonRigidCPD[D: NDSpace](
 
     val myG = G
     val diagP1inv = inv(diag(P1))
-    val PX = P*X
+    val PX = P * X
 
-    val A: DenseMatrix[Double] = G+lambda*sigma2*diagP1inv
-    val B: DenseMatrix[Double] = diagP1inv*PX-Y
+    val A: DenseMatrix[Double] = G + lambda * sigma2 * diagP1inv
+    val B: DenseMatrix[Double] = diagP1inv * PX - Y
 
     val W = A \ B
     // Update Point Cloud
@@ -49,7 +53,7 @@ private[cpd] class NonRigidCPD[D: NDSpace](
     // The original CPD paper does not explicitly calculate the objective functional.
     // This functional will include terms from both the negative log-likelihood and
     // the Gaussian kernel used for regularization.
-    val xPx: Double = Pt1.t dot sum(X *:* X, Axis._1)
+    val xPx: Double = Pt1.t.dot(sum(X *:* X, Axis._1))
     val yPy: Double = P1.t * sum(TY *:* TY, Axis._1)
 
     val trPXY: Double = sum(TY *:* (P * X))

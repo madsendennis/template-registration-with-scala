@@ -1,4 +1,4 @@
-package other.api.utils
+package other.stuff.utils
 
 import scalismo.geometry.{_3D, Landmark, Point}
 import scalismo.mesh.TriangleMesh

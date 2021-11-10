@@ -1,24 +1,27 @@
 package other.cpd
 
 import api.registration.utils.PointSequenceConverter
-import breeze.linalg.{*, Axis, DenseMatrix, DenseVector, det, diag, norm, sum, svd, tile, trace}
+import breeze.linalg.{*, det, diag, norm, sum, svd, tile, trace, Axis, DenseMatrix, DenseVector}
 import breeze.numerics.{abs, pow}
 import scalismo.common.Vectorizer
 import scalismo.geometry.{NDSpace, Point}
 
+/*
+ Implementation of Point Set Registration: Coherent Point Drift (CPD) - Rigid algorithm
+ Paper: https://arxiv.org/pdf/0905.2635.pdf
+ */
 private[cpd] class RigidCPD[D: NDSpace](
-    val targetPoints: Seq[Point[D]],
-    val cpd: CPDFactory[D]
-)(
-    implicit val vectorizer: Vectorizer[Point[D]],
-    dataConverter: PointSequenceConverter[D]
+  val targetPoints: Seq[Point[D]],
+  val cpd: CPDFactory[D]
+)(implicit
+  val vectorizer: Vectorizer[Point[D]],
+  dataConverter: PointSequenceConverter[D]
 ) {
   import cpd._
   val N: Int = targetPoints.length
   val target: DenseMatrix[Double] = dataConverter.toMatrix(targetPoints)(vectorizer)
 
-  /**
-    * Initialize sigma2 - formula in paper fig. 4
+  /** Initialize sigma2 - formula in paper fig. 4
     * @param Y
     * @param X
     * @return

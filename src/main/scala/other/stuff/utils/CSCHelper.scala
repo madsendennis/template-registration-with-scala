@@ -1,4 +1,4 @@
-package other.api.utils
+package other.stuff.utils
 
 import breeze.linalg.{CSCMatrix, DenseMatrix}
 

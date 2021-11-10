@@ -2,7 +2,7 @@ package other.icp
 
 import api.registration.utils.{NonRigidClosestPointRegistrator, PointSequenceConverter}
 import breeze.linalg.{diag, CSCMatrix, DenseMatrix, SparseVector}
-import other.api.utils.CSCHelper
+import other.stuff.utils.CSCHelper
 import scalismo.common.{DomainWarp, PointId, UnstructuredPoints3D, Vectorizer}
 import scalismo.geometry._
 import scalismo.mesh.{TriangleCell, TriangleMesh}

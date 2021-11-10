@@ -1,4 +1,4 @@
-package other.api.icp
+package other.stuff.icp
 
 import api.registration.utils.NonRigidClosestPointRegistrator._
 import breeze.linalg.DenseVector

@@ -1,16 +1,20 @@
 package other.cpd
 
 import api.registration.utils.PointSequenceConverter
-import breeze.linalg.{Axis, DenseMatrix, DenseVector, InjectNumericOps, diag, inv, sum, trace}
+import breeze.linalg.{diag, inv, sum, trace, Axis, DenseMatrix, DenseVector, InjectNumericOps}
 import scalismo.common._
 import scalismo.geometry.{NDSpace, Point}
 
+/*
+ Implementation of Point Set Registration: Coherent Point Drift (CPD) - Affine transformation algorithm
+ Paper: https://arxiv.org/pdf/0905.2635.pdf
+ */
 private[cpd] class AffineCPD[D: NDSpace](
-    override val targetPoints: Seq[Point[D]],
-    override val cpd: CPDFactory[D]
-)(
-    implicit vectorizer: Vectorizer[Point[D]],
-    dataConverter: PointSequenceConverter[D]
+  override val targetPoints: Seq[Point[D]],
+  override val cpd: CPDFactory[D]
+)(implicit
+  vectorizer: Vectorizer[Point[D]],
+  dataConverter: PointSequenceConverter[D]
 ) extends RigidCPD[D](targetPoints, cpd) {
   import cpd._
   override def Maximization(X: DenseMatrix[Double], Y: DenseMatrix[Double], P: DenseMatrix[Double], sigma2: Double): (DenseMatrix[Double], Double) = {

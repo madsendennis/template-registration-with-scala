@@ -1,4 +1,4 @@
-package other.api.cpd
+package other.stuff.cpd
 
 import api.registration.utils._
 import breeze.linalg.{diag, pinv, sum, tile, trace, Axis, DenseMatrix, DenseVector}

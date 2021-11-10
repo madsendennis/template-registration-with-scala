@@ -1,13 +1,12 @@
 package other.cpd
 
 import api.registration.utils.PointSequenceConverter
-import breeze.linalg.{Axis, DenseMatrix, DenseVector, det, diag, kron, pinv, sum, svd, tile, trace}
+import breeze.linalg.{det, diag, kron, pinv, sum, svd, tile, trace, Axis, DenseMatrix, DenseVector}
 import breeze.numerics.{abs, digamma}
 import scalismo.common.Vectorizer
 import scalismo.geometry.{NDSpace, Point}
 import scalismo.kernels.PDKernel
 import scalismo.statisticalmodel.MultivariateNormalDistribution
-
 
 // Similarity transformation parameters
 case class similarityTransformationParameters(sigma: DenseMatrix[Double], s: Double, R: DenseMatrix[Double], t: DenseVector[Double], sigma2: Double, alpha: DenseVector[Double])
@@ -17,17 +16,17 @@ case class similarityTransformationParameters(sigma: DenseMatrix[Double], s: Dou
  Paper: https://ieeexplore.ieee.org/stamp/stamp.jsp?arnumber=8985307
  */
 class BCPD[D: NDSpace](
-                        val templatePoints: Seq[Point[D]],
-                        val targetPoints: Seq[Point[D]],
-                        val w: Double, // Outlier, [0,1]
-                        val lambda: Double, // Noise scaling, R+
-                        val gamma: Double, // Initial noise scaling, R+
-                        val k: Double,
-                        val kernel: PDKernel[D] // Positive semi-def kernel
-                      )(
-                        implicit val vectorizer: Vectorizer[Point[D]],
-                        dataConverter: PointSequenceConverter[D]
-                      ) {
+  val templatePoints: Seq[Point[D]],
+  val targetPoints: Seq[Point[D]],
+  val w: Double, // Outlier, [0,1]
+  val lambda: Double, // Noise scaling, R+
+  val gamma: Double, // Initial noise scaling, R+
+  val k: Double,
+  val kernel: PDKernel[D] // Positive semi-def kernel
+)(implicit
+  val vectorizer: Vectorizer[Point[D]],
+  dataConverter: PointSequenceConverter[D]
+) {
   require(0.0 <= w && w <= 1.0)
   require(lambda > 0)
   require(gamma > 0)
@@ -45,17 +44,16 @@ class BCPD[D: NDSpace](
   val D1Vec: DenseMatrix[Double] = DenseVector.ones[Double](dim).toDenseMatrix
   val Dmat: DenseMatrix[Double] = DenseMatrix.eye[Double](dim)
 
-  /**
-    * Initialize G matrix - formula in paper fig. 4
+  /** Initialize G matrix - formula in paper fig. 4
     *
     * @param points
-    * //    * @param kernel
+    *   // * @param kernel
     * @return
     */
   private def initializeKernelMatrixG(
-                                       points: Seq[Point[D]],
-                                       kernel: PDKernel[D]
-                                     ): DenseMatrix[Double] = {
+    points: Seq[Point[D]],
+    kernel: PDKernel[D]
+  ): DenseMatrix[Double] = {
     val G: DenseMatrix[Double] = DenseMatrix.zeros[Double](M, M)
     (0 until M).map { i =>
       (0 until M).map { j =>
@@ -65,8 +63,7 @@ class BCPD[D: NDSpace](
     G
   }
 
-  /**
-    * Initialize sigma2 - formula in paper fig. 4
+  /** Initialize sigma2 - formula in paper fig. 4
     *
     * @param Y
     * @param X
@@ -149,11 +146,12 @@ class BCPD[D: NDSpace](
     Pinit /:/ den
   }
 
-  /**
-    * One iteration of BCPD
+  /** One iteration of BCPD
     *
-    * @param YhatPoints // template points (M)
-    * @param pars       // Similarity transformation parameters
+    * @param YhatPoints
+    *   // template points (M)
+    * @param pars
+    *   // Similarity transformation parameters
     * @return
     */
   def Iteration(YhatPoints: Seq[Point[D]], pars: similarityTransformationParameters): (Seq[Point[D]], similarityTransformationParameters) = {

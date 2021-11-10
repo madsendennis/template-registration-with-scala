@@ -1,6 +1,6 @@
-package other.api
+package other.stuff
 
-import other.api.cpd.{BCPDwithGPMM, NonRigidCPDwithGPMM, SpecialICPwithGPMM}
+import other.stuff.cpd.{BCPDwithGPMM, NonRigidCPDwithGPMM, SpecialICPwithGPMM}
 import api.registration.utils._
 import breeze.linalg.DenseVector
 import scalismo.common.{DiscreteDomain, DiscreteField, DomainWarp, Vectorizer}
