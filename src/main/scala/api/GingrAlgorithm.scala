@@ -2,14 +2,14 @@ package api
 
 import api.sampling.{AcceptAll, Evaluator, Generator}
 import api.sampling.evaluators.EvaluatorWrapper
-import api.sampling.loggers.{EmptyAcceptRejectLogger, EmptyChainStateLogger}
-import api.sampling.generators.{GeneratorWrapperDeterministic, GeneratorWrapperStochastic, RandomShapeUpdateProposal}
+import api.sampling.loggers.{BestAndCurrentSampleLogger, EmptyAcceptRejectLogger, EmptyChainStateLogger}
+import api.sampling.generators.{GeneratorWrapperDeterministic, GeneratorWrapperStochastic}
 import scalismo.common.PointId
 import scalismo.geometry.{_3D, Point}
 import scalismo.mesh.TriangleMesh
 import scalismo.registration.LandmarkRegistration
 import scalismo.sampling.algorithms.MetropolisHastings
-import scalismo.sampling.loggers.{AcceptRejectLogger, BestSampleLogger, ChainStateLogger, ChainStateLoggerContainer}
+import scalismo.sampling.loggers.{AcceptRejectLogger, ChainStateLogger, ChainStateLoggerContainer}
 import scalismo.sampling.loggers.ChainStateLogger.implicits._
 import scalismo.sampling.proposals.MixtureProposal
 import scalismo.sampling.proposals.MixtureProposal.implicits._
@@ -18,7 +18,7 @@ import scalismo.statisticalmodel.{MultivariateNormalDistribution, PointDistribut
 import scalismo.transformations.{Scaling, TranslationAfterRotation, TranslationAfterScalingAfterRotation, TranslationAfterScalingAfterRotationSpace3D}
 import scalismo.utils.{Memoize, Random}
 
-case class ProbabilisticSettings[State <: GingrRegistrationState[State]](evaluators: Evaluator[State], randomMixture: Double = 0.2) {
+case class ProbabilisticSettings[State <: GingrRegistrationState[State]](evaluators: Evaluator[State], randomMixture: Double = 0.3) {
   require(randomMixture >= 0.0 && randomMixture <= 1.0)
 }
 
@@ -36,7 +36,7 @@ trait GingrRegistrationState[State] {
 
 trait GingrAlgorithm[State <: GingrRegistrationState[State]] {
   def name: String
-  val getCorrespondence: (State) => CorrespondencePairs
+  val getCorrespondence: State => CorrespondencePairs
   val getUncertainty: (PointId, State) => MultivariateNormalDistribution
 
   private def computePosterior(current: State): PointDistributionModel[_3D, TriangleMesh] = {
@@ -55,7 +55,9 @@ trait GingrAlgorithm[State <: GingrRegistrationState[State]] {
     } else {
       correspondencesWithUncertainty
     }
-    current.general.model.posterior(observationsWithUncertainty)
+
+    // Need to realign model first!!!
+    current.general.model.transform(current.general.modelParameters.rigidTransform).posterior(observationsWithUncertainty)
   }
   private val cashedPosterior = Memoize(computePosterior, 10)
 
@@ -66,27 +68,30 @@ trait GingrAlgorithm[State <: GingrRegistrationState[State]] {
   def update(current: State, probabilistic: Boolean)(implicit rnd: Random): State = {
     val posterior = cashedPosterior(current)
     val shapeproposal = if (!probabilistic) posterior.mean else posterior.sample()
+    val transformedModelInit = current.general.model.transform(current.general.modelParameters.rigidTransform)
 
-    val newCoefficients = current.general.model.coefficients(shapeproposal)
+    val newCoefficients = transformedModelInit.coefficients(shapeproposal)
     val currentShapeCoefficients = current.general.modelParameters.shape.parameters
     val newShapeCoefficients = currentShapeCoefficients + (newCoefficients - currentShapeCoefficients) * current.general.stepLength
 
-    val newshape = current.general.model.instance(newShapeCoefficients)
+    val newshape = transformedModelInit.instance(newShapeCoefficients)
 
-    // Need to scale proposal according to "step-length"
+    // Compute alignment to non-aligned fit to avoid adding together transformations afterward
+    val currentFitNotAligned =
+      current.general.fit.transform(current.general.modelParameters.rigidTransform.inverse).transform(current.general.modelParameters.scaleTransform.inverse)
+
     val globalTransform: TranslationAfterScalingAfterRotation[_3D] = current.general.globalTransformation match {
-      case SimilarityTransforms => estimateSimilarityTransform(current.general.fit, newshape)
-      case RigidTransforms => estimateRigidTransform(current.general.fit, newshape)
+      case SimilarityTransforms => estimateSimilarityTransform(currentFitNotAligned, newshape)
+      case RigidTransforms => estimateRigidTransform(currentFitNotAligned, newshape)
       case _ => TranslationAfterScalingAfterRotationSpace3D(Point(0, 0, 0)).identityTransformation
     }
-    val alignment: TranslationAfterRotation[_3D] = TranslationAfterRotation(globalTransform.translation, globalTransform.rotation)
-    val transformedModel = current.general.model.transform(alignment)
+    val newGlobalAlignment: TranslationAfterRotation[_3D] = TranslationAfterRotation(globalTransform.translation, globalTransform.rotation)
+    val transformedModel = current.general.model.transform(newGlobalAlignment)
     val alpha = transformedModel.coefficients(newshape)
-    val fit = transformedModel.instance(alpha).transform(globalTransform.scaling)
+
     val general = current.general
-      .updateFit(fit)
-      .updateTranslation(alignment.translation.t)
-      .updateRotation(alignment.rotation)
+      .updateTranslation(newGlobalAlignment.translation.t)
+      .updateRotation(newGlobalAlignment.rotation)
       .updateScaling(ScaleParameter(globalTransform.scaling.s))
       .updateShapeParameters(ShapeParameters(alpha))
     updateSigma2(current.updateGeneral(general))
@@ -133,6 +138,7 @@ trait GingrAlgorithm[State <: GingrRegistrationState[State]] {
     * @param callBackLogger
     *   Logger to provide call back functionality to user after each iteration
     * @param acceptRejectLogger
+    *   Logger to use for advanced file logging
     * @param probabilisticSettings
     *   Evaluator to be used if probabilistic registration is set
     * @param generators
@@ -152,7 +158,7 @@ trait GingrAlgorithm[State <: GingrRegistrationState[State]] {
     val evaluator = probabilisticSettings.getOrElse(ProbabilisticSettings(AcceptAll(), randomMixture = 0.0))
     val registrationEvaluator = EvaluatorWrapper(probabilisticSettings.nonEmpty, evaluator.evaluators)
     val registrationGenerator = generatorCombined(probabilisticSettings, generators)
-    val bestSampleLogger = BestSampleLogger[State](registrationEvaluator)
+    val bestSampleLogger = BestAndCurrentSampleLogger[State](registrationEvaluator)
     val logs = ChainStateLoggerContainer(Seq(callBackLogger, bestSampleLogger))
     val mhChain = MetropolisHastings[State](registrationGenerator, registrationEvaluator)
 
@@ -161,7 +167,11 @@ trait GingrAlgorithm[State <: GingrRegistrationState[State]] {
     // we need to query if there is a next element, otherwise due to laziness the chain is not calculated
     states.take(initialState.general.maxIterations).dropWhile(state => !state.general.converged).hasNext
 
-    val fit = bestSampleLogger.currentBestSample().get
+    // If probabilistic: select the sample with the best posterior value. If deterministic: select the last sample.
+    val fit = probabilisticSettings match {
+      case Some(_) => bestSampleLogger.currentBestSample().get
+      case _ => bestSampleLogger.currentSample().get
+    }
     fit
   }
 }

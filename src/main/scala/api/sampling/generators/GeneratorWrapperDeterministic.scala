@@ -5,8 +5,8 @@ import scalismo.sampling.{ProposalGenerator, TransitionProbability}
 import scalismo.utils.Random
 
 case class GeneratorWrapperDeterministic[State <: GingrRegistrationState[State]](update: (State, Boolean) => State, generatedBy: String = "Deterministic")(implicit rnd: Random)
-  extends ProposalGenerator[State] with TransitionProbability[State] {
-  override def propose(current: State): State = {
+  extends GingrGeneratorWrapper[State] {
+  override def gingrPropose(current: State): State = {
     val newState = update(current, false)
     newState.updateGeneral(newState.general.updateGeneratedBy(generatedBy))
   }

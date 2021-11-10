@@ -111,6 +111,7 @@ object GeneralRegistrationState {
       ),
       shape = ShapeParameters(DenseVector.zeros[Double](model.rank))
     )
+    val fit = ModelFittingParameters.modelInstanceShapePoseScale(model, modelPars)
     val initial =
       new GeneralRegistrationState(
         model = model,
@@ -118,7 +119,7 @@ object GeneralRegistrationState {
         modelLandmarks = Option(modelLandmarks),
         target = target,
         targetLandmarks = Option(targetLandmarks),
-        fit = model.mean,
+        fit = fit,
         globalTransformation = transform
       )
     initial

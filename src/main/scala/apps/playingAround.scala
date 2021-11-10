@@ -2,16 +2,14 @@ package apps
 
 import java.io.File
 
-import api.{GeneralRegistrationState, GingrRegistrationState, NoTransforms, ProbabilisticSettings, RigidTransforms}
+import api.{GeneralRegistrationState, GingrRegistrationState, ProbabilisticSettings, RigidTransforms}
 import api.registration.config.{CpdConfiguration, CpdRegistration, CpdRegistrationState, IcpConfiguration, IcpRegistration, IcpRegistrationState}
 import api.sampling.IndependtPoints
-import api.sampling.evaluators.{IndependentPointDistanceEvaluator, ModelToTargetEvaluation}
 import api.sampling.loggers.JSONStateLogger
 import scalismo.common.interpolation.NearestNeighborInterpolator
 import scalismo.geometry._3D
 import scalismo.io.{LandmarkIO, MeshIO, StatisticalModelIO}
 import scalismo.mesh.TriangleMesh
-import scalismo.sampling.DistributionEvaluator
 import scalismo.sampling.loggers.ChainStateLogger
 import scalismo.statisticalmodel.PointDistributionModel
 import scalismo.ui.api.ScalismoUI
@@ -41,7 +39,7 @@ object playingAround extends App {
   ui.show(targetGroup, target, "target")
 
   // CPD
-  val configCPD = CpdConfiguration(maxIterations = 10000)
+  val configCPD = CpdConfiguration(maxIterations = 100)
   val initState: CpdRegistrationState = CpdRegistrationState(GeneralRegistrationState(model, target, transform = RigidTransforms), configCPD)
   val registratorCPD = new CpdRegistration()
   val t1 = System.nanoTime
@@ -68,6 +66,10 @@ object playingAround extends App {
   val finalCPD = registratorCPD.run(initState, callBackLogger = visualLogger(), acceptRejectLogger = jsonLogger, probabilisticSettings = Some(probSetting))
   val duration = (System.nanoTime - t1) / 1e9d
   println(s"Registration time: ${duration}")
+  RegistrationComparison.evaluateReconstruction2GroundTruth("some", finalCPD.general.fit, target)
+
+  // Deterministic: ID: some average2surface: 0.6150886964149156 max: 3.441393200035686, hausdorff: 3.441393200035686
+  // Stochastic: ID: some average2surface: 0.5684901202111056 max: 2.790641920927395, hausdorff: 2.790641920927395
 
   // ICP
 //  val configICP = IcpConfiguration(maxIterations = 20, initialSigma = 100, endSigma = 10)
@@ -75,7 +77,7 @@ object playingAround extends App {
 //  val registratorICP = new IcpRegistration()
 //  val finalState = registratorICP.run(icpState).general
 
-//  ui.show(otherGroup, finalState.fit, "fit")
+  ui.show(otherGroup, finalCPD.general.fit, "fit")
 //  showModel.shapeModelTransformationView.shapeTransformationView.coefficients = finalState.modelParameters
 //  showModel.shapeModelTransformationView.poseTransformationView.transformation = finalState.alignment
 }

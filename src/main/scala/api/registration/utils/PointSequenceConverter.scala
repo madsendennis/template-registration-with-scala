@@ -1,4 +1,5 @@
 package api.registration.utils
+
 import breeze.linalg.{CSCMatrix, DenseMatrix, DenseVector}
 import scalismo.common.{PointId, Vectorizer}
 import scalismo.geometry.Point.{Point1DVectorizer, Point2DVectorizer, Point3DVectorizer}
@@ -11,18 +12,16 @@ trait PointSequenceConverter[D] {
   def toMatrix(points: Seq[Point[D]])(implicit vectorizer: Vectorizer[Point[D]]): DenseMatrix[Double] = {
     val dim: Int = vectorizer.dim
     val m = DenseMatrix.zeros[Double](points.length, dim)
-    points.zipWithIndex.par.foreach {
-      case (p, i) =>
-        m(i, ::) := vectorizer.vectorize(p).t
+    points.zipWithIndex.par.foreach { case (p, i) =>
+      m(i, ::) := vectorizer.vectorize(p).t
     }
     m
   }
 
   // Vectorize with x_1x, x_1y, x_1z, x_2x ...
   def toVector(points: Seq[Point[D]])(implicit vectorizer: Vectorizer[Point[D]]): DenseVector[Double] = {
-    DenseVector(points.flatMap {
-      p =>
-        vectorizer.vectorize(p).toArray
+    DenseVector(points.flatMap { p =>
+      vectorizer.vectorize(p).toArray
     }.toArray)
   }
 
@@ -30,12 +29,11 @@ trait PointSequenceConverter[D] {
     val nPoints = points.size
     val dim: Int = vectorizer.dim
     val csc = CSCMatrix.zeros[Double](nPoints, dim)
-    points.zip(pointIds).zipWithIndex.foreach {
-      case ((p, pid), i) =>
-        val v = vectorizer.vectorize(p)
-        for (j <- 0 until dim) {
-          csc(i, j) = v(j)
-        }
+    points.zip(pointIds).zipWithIndex.foreach { case ((p, pid), i) =>
+      val v = vectorizer.vectorize(p)
+      for (j <- 0 until dim) {
+        csc(i, j) = v(j)
+      }
     }
     csc
   }
@@ -44,19 +42,19 @@ trait PointSequenceConverter[D] {
 object PointSequenceConverter {
 
   def matrixTo1Dpoints(m: DenseMatrix[Double]): IndexedSeq[Point[_1D]] = {
-    0 until m.rows map { r =>
+    (0 until m.rows).map { r =>
       Point1D(x = m(r, 0))
     }
   }
 
   def matrixTo2Dpoints(m: DenseMatrix[Double]): IndexedSeq[Point[_2D]] = {
-    0 until m.rows map { r =>
+    (0 until m.rows).map { r =>
       Point2D(x = m(r, 0), y = m(r, 1))
     }
   }
 
   def matrixTo3Dpoints(m: DenseMatrix[Double]): IndexedSeq[Point[_3D]] = {
-    0 until m.rows map { r =>
+    (0 until m.rows).map { r =>
       Point3D(x = m(r, 0), y = m(r, 1), z = m(r, 2))
     }
   }
@@ -68,13 +66,13 @@ object PointSequenceConverter {
   }
 
   def vectorTo2Dpoints(v: DenseVector[Double]): IndexedSeq[Point[_2D]] = {
-    0 until v.length / 2 map { i =>
+    (0 until v.length / 2).map { i =>
       Point2D(x = v(i * 2), y = v(i * 2 + 1))
     }
   }
 
   def vectorTo3Dpoints(v: DenseVector[Double]): IndexedSeq[Point[_3D]] = {
-    0 until v.length / 3 map { i =>
+    (0 until v.length / 3).map { i =>
       Point3D(x = v(i * 3), y = v(i * 3 + 1), z = v(i * 3 + 2))
     }
   }

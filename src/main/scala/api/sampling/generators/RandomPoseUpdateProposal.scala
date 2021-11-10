@@ -12,11 +12,11 @@ case object PitchAxis extends RotationAxis
 case object YawAxis extends RotationAxis
 
 case class GaussianAxisRotationProposal[State <: GingrRegistrationState[State]](sdevRot: Double, axis: RotationAxis, generatedBy: String = "RotationProposal")
-  extends ProposalGenerator[State] with TransitionProbability[State] {
+  extends GingrGeneratorWrapper[State] {
 
   val perturbationDistr = new breeze.stats.distributions.Gaussian(0, sdevRot)
 
-  override def propose(theta: State): State = {
+  override def gingrPropose(theta: State): State = {
     val rotParams = theta.general.modelParameters.pose.rotation.angles
     val newRotParams = axis match {
       case RollAxis => rotParams.copy(phi = rotParams.phi + perturbationDistr.sample())
@@ -44,11 +44,11 @@ case class GaussianAxisRotationProposal[State <: GingrRegistrationState[State]](
 }
 
 case class GaussianAxisTranslationProposal[State <: GingrRegistrationState[State]](sdevTrans: Double, axis: Int, generatedBy: String = "TranslationProposal")
-  extends ProposalGenerator[State] with TransitionProbability[State] {
+  extends GingrGeneratorWrapper[State] {
   require(axis < 3)
   val perturbationDistr = new breeze.stats.distributions.Gaussian(0, sdevTrans)
 
-  override def propose(theta: State): State = {
+  override def gingrPropose(theta: State): State = {
 
     perturbationDistr.sample()
 

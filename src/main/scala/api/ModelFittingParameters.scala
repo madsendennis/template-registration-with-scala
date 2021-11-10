@@ -2,7 +2,9 @@ package api
 
 import breeze.linalg.DenseVector
 import scalismo.geometry.{_3D, EuclideanVector, Point}
-import scalismo.transformations.{Rotation, Scaling, Translation, TranslationAfterRotation, TranslationAfterScalingAfterRotation}
+import scalismo.mesh.TriangleMesh
+import scalismo.statisticalmodel.PointDistributionModel
+import scalismo.transformations.{Rotation, Scaling, Scaling3D, Translation, TranslationAfterRotation, TranslationAfterScalingAfterRotation}
 
 case class ScaleParameter(s: Double) {
   def parameters: DenseVector[Double] = DenseVector(s)
@@ -44,5 +46,33 @@ case class ModelFittingParameters(scale: ScaleParameter, pose: PoseParameters, s
     val rotation = pose.rotation.rotation
     val scaling = Scaling[_3D](scale.s)
     TranslationAfterScalingAfterRotation(translation, scaling, rotation)
+  }
+
+  def scaleTransform: Scaling[_3D] = Scaling3D(scale.s)
+}
+
+object ModelFittingParameters {
+  def apply(modelRank: Int): ModelFittingParameters = {
+    val pose = PoseParameters(translation = EuclideanVector(0, 0, 0), rotation = EulerRotation(EulerAngles(0, 0, 0), Point(0, 0, 0)))
+    val shape = ShapeParameters(DenseVector.zeros[Double](modelRank))
+    ModelFittingParameters(ScaleParameter(1.0), pose, shape)
+  }
+
+  def apply(shape: ShapeParameters): ModelFittingParameters = {
+    val pose = PoseParameters(translation = EuclideanVector(0, 0, 0), rotation = EulerRotation(EulerAngles(0, 0, 0), Point(0, 0, 0)))
+    ModelFittingParameters(ScaleParameter(1.0), pose, shape)
+  }
+
+  def apply(pose: PoseParameters, shape: ShapeParameters): ModelFittingParameters = {
+    ModelFittingParameters(ScaleParameter(1.0), pose, shape)
+  }
+
+  def modelInstanceShapePose(model: PointDistributionModel[_3D, TriangleMesh], pars: ModelFittingParameters): TriangleMesh[_3D] = {
+    model.instance(pars.shape.parameters).transform(pars.rigidTransform)
+  }
+
+  def modelInstanceShapePoseScale(model: PointDistributionModel[_3D, TriangleMesh], pars: ModelFittingParameters): TriangleMesh[_3D] = {
+    val instance = modelInstanceShapePose(model, pars)
+    instance.transform(pars.scaleTransform)
   }
 }
