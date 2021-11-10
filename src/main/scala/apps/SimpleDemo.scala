@@ -14,7 +14,7 @@ object SimpleDemo extends App {
   val model = StatisticalModelIO.readStatisticalTriangleMeshModel3D(new File("data/femur_gp_model_50-components.h5")).get
   val target: TriangleMesh[_3D] = MeshIO.readMesh(new File("data/femur_target.stl")).get
 
-  val configCPD = CpdConfiguration(maxIterations = 100)
+  val configCPD = CpdConfiguration(maxIterations = 100, threshold = 1e-20)
   val algorithmCPD = new CpdRegistration()
 
   val simpleRegistration = new SimpleRegistrator[CpdRegistrationState, CpdRegistration, CpdConfiguration](

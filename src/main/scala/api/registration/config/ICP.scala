@@ -17,8 +17,9 @@ object ICPCorrespondence {
 
 case class IcpConfiguration(
   override val maxIterations: Int = 100,
-  override val threshold: Double = 1e-5,
-  override val converged: (GeneralRegistrationState, GeneralRegistrationState) => Boolean = (last: GeneralRegistrationState, current: GeneralRegistrationState) => false,
+  override val threshold: Double = 1e-10,
+  override val converged: (GeneralRegistrationState, GeneralRegistrationState, Double) => Boolean =
+    (last: GeneralRegistrationState, current: GeneralRegistrationState, threshold: Double) => false,
   override val useLandmarkCorrespondence: Boolean = true,
   initialSigma: Double = 100.0,
   endSigma: Double = 1.0

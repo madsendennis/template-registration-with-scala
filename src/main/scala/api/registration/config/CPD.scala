@@ -81,13 +81,9 @@ object CpdRegistrationState {
 
 case class CpdConfiguration(
   override val maxIterations: Int = 100,
-  override val threshold: Double = 1e-5,
-  override val converged: (GeneralRegistrationState, GeneralRegistrationState) => Boolean = (last: GeneralRegistrationState, current: GeneralRegistrationState) => {
-//    val minSigma = last.sigma2 - current.sigma2
-//    println(s"Sigmas: ${minSigma}, ${last.sigma2 - current.sigma2 < current.threshold}")
-//    last.sigma2 - current.sigma2 < current.threshold
-    false
-  },
+  override val threshold: Double = 1e-10,
+  override val converged: (GeneralRegistrationState, GeneralRegistrationState, Double) => Boolean =
+    (last: GeneralRegistrationState, current: GeneralRegistrationState, threshold: Double) => math.abs(last.sigma2 - current.sigma2) < threshold,
   override val useLandmarkCorrespondence: Boolean = true,
   initialSigma: Option[Double] = None,
   w: Double = 0.0,

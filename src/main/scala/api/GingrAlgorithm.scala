@@ -25,7 +25,7 @@ case class ProbabilisticSettings[State <: GingrRegistrationState[State]](evaluat
 trait GingrConfig {
   def maxIterations(): Int
   def threshold(): Double
-  def converged: (GeneralRegistrationState, GeneralRegistrationState) => Boolean
+  def converged: (GeneralRegistrationState, GeneralRegistrationState, Double) => Boolean
   def useLandmarkCorrespondence(): Boolean
 }
 
@@ -167,8 +167,18 @@ trait GingrAlgorithm[State <: GingrRegistrationState[State]] {
     val states = mhChain.iterator(initialState, acceptRejectLogger).loggedWith(logs)
 
     // we need to query if there is a next element, otherwise due to laziness the chain is not calculated
-    // TODO: Converge only when in deterministic mode!!!
-    states.take(initialState.config.maxIterations()).dropWhile(state => true).hasNext
+    var currentState: Option[GeneralRegistrationState] = None
+    states
+      .take(initialState.config.maxIterations())
+      .dropWhile { state =>
+        if (probabilisticSettings.isEmpty) {
+          val converged = if (currentState.nonEmpty) state.config.converged(currentState.get, state.general, state.config.threshold()) else false
+          currentState = Some(state.general)
+          if (converged) println(s"Registration converged")
+          !converged
+        } else true
+      }
+      .hasNext
 
     // If probabilistic: select the sample with the best posterior value. If deterministic: select the last sample.
     val fit = probabilisticSettings match {
