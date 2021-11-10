@@ -1,4 +1,4 @@
-package other.stuff.utils
+package other.utils
 
 import breeze.linalg.{CSCMatrix, DenseMatrix}
 
@@ -63,7 +63,6 @@ object CSCHelper {
       }
       i += 1
     }
-
     res
   }
 }

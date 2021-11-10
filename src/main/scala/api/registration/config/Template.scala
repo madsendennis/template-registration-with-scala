@@ -12,7 +12,7 @@ case class TemplateConfiguration(
 ) extends GingrConfig {}
 
 case class TemplateRegistrationState(general: GeneralRegistrationState, config: TemplateConfiguration) extends GingrRegistrationState[TemplateRegistrationState] {
-  override private[api] def updateGeneral(update: GeneralRegistrationState): TemplateRegistrationState = this.copy(general = update)
+  override def updateGeneral(update: GeneralRegistrationState): TemplateRegistrationState = this.copy(general = update)
 }
 
 object TemplateRegistrationState {

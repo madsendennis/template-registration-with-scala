@@ -1,17 +1,17 @@
-package other.icp
+package other.algorithms.icp
 
-import api.registration.utils.Registrator
 import breeze.numerics.abs
+import other.utils.Registrator
 import scalismo.common.{PointId, UnstructuredPoints, Vectorizer}
 import scalismo.geometry.{NDSpace, Point}
 
 private[icp] class RigidICP[D: NDSpace](
-                                         val targetPoints: UnstructuredPoints[D],
-                                         val icp: ICPFactory[D]
-                                       )(
-                                         implicit val vectorizer: Vectorizer[Point[D]],
-                                         registrator: Registrator[D]
-                                       ) {
+  val targetPoints: UnstructuredPoints[D],
+  val icp: ICPFactory[D]
+)(implicit
+  val vectorizer: Vectorizer[Point[D]],
+  registrator: Registrator[D]
+) {
   require(vectorizer.dim == 2 || vectorizer.dim == 3)
 
   def Registration(max_iteration: Int, tolerance: Double = 0.001): UnstructuredPoints[D] = {

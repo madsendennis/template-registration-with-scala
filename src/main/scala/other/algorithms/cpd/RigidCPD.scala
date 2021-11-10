@@ -1,4 +1,4 @@
-package other.cpd
+package other.algorithms.cpd
 
 import api.registration.utils.PointSequenceConverter
 import breeze.linalg.{*, det, diag, norm, sum, svd, tile, trace, Axis, DenseMatrix, DenseVector}

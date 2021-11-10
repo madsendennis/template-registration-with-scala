@@ -80,6 +80,7 @@ case class JSONStateLogger[State <: GingrRegistrationState[State]](evaluators: E
   }
 
   override def accept(current: State, sample: State, generator: ProposalGenerator[State], evaluator: DistributionEvaluator[State]): Unit = {
+    numOfAccepted += 1
     val evalValue = mapEvaluators(sample)
     log += jsonLogFormat(
       totalSamples,
@@ -93,11 +94,11 @@ case class JSONStateLogger[State <: GingrRegistrationState[State]](evaluators: E
       sample.general.modelParameters.scale.s,
       datetimeFormat.format(Calendar.getInstance().getTime)
     )
-    numOfAccepted += 1
   }
 
   // The rejected state will contain the same parameters as the previous accepted state, so no need to double store all the information
   override def reject(current: State, sample: State, generator: ProposalGenerator[State], evaluator: DistributionEvaluator[State]): Unit = {
+    numOfRejected += 1
     val evalValue = mapEvaluators(sample)
     log += jsonLogFormat(
       totalSamples,
@@ -111,7 +112,6 @@ case class JSONStateLogger[State <: GingrRegistrationState[State]](evaluators: E
       sample.general.modelParameters.scale.s,
       datetimeFormat.format(Calendar.getInstance().getTime)
     )
-    numOfRejected += 1
   }
 
   def percentRejected: Double = BigDecimal(numOfRejected.toDouble / totalSamples.toDouble).setScale(2, BigDecimal.RoundingMode.HALF_UP).toDouble

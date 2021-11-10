@@ -27,7 +27,7 @@ case class IcpConfiguration(
 }
 
 case class IcpRegistrationState(general: GeneralRegistrationState, config: IcpConfiguration) extends GingrRegistrationState[IcpRegistrationState] {
-  override private[api] def updateGeneral(update: GeneralRegistrationState): IcpRegistrationState = this.copy(general = update)
+  override def updateGeneral(update: GeneralRegistrationState): IcpRegistrationState = this.copy(general = update)
 }
 
 object IcpRegistrationState {

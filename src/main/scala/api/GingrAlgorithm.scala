@@ -31,7 +31,7 @@ trait GingrConfig {
 trait GingrRegistrationState[State] {
   def general: GeneralRegistrationState
   def config: GingrConfig
-  private[api] def updateGeneral(update: GeneralRegistrationState): State
+  def updateGeneral(update: GeneralRegistrationState): State
 }
 
 trait GingrAlgorithm[State <: GingrRegistrationState[State]] {
@@ -56,7 +56,7 @@ trait GingrAlgorithm[State <: GingrRegistrationState[State]] {
       correspondencesWithUncertainty
     }
 
-    // Need to realign model first!!!
+    // Need to realign model first
     current.general.model.transform(current.general.modelParameters.rigidTransform).posterior(observationsWithUncertainty)
   }
   private val cashedPosterior = Memoize(computePosterior, 10)
@@ -124,7 +124,7 @@ trait GingrAlgorithm[State <: GingrRegistrationState[State]] {
     rnd: Random): ProposalGenerator[State] with TransitionProbability[State] = {
     probabilisticSettings match {
       case Some(setting) =>
-        val mix = mixing.getOrElse(Generator().DefaultRandom()) // Use passed in generator or use default random generator to mix with
+        val mix = mixing.getOrElse(new Generator().DefaultRandom()) // Use passed in generator or use default random generator to mix with
         val informedGenerator = GeneratorWrapperStochastic(update, cashedPosterior, name)
         MixtureProposal(setting.randomMixture *: mix + (1.0 - setting.randomMixture) *: informedGenerator)
       case _ => GeneratorWrapperDeterministic(update, name)
@@ -165,6 +165,7 @@ trait GingrAlgorithm[State <: GingrRegistrationState[State]] {
     val states = mhChain.iterator(initialState, acceptRejectLogger).loggedWith(logs)
 
     // we need to query if there is a next element, otherwise due to laziness the chain is not calculated
+    // TODO: Converge only when in deterministic mode!!!
     states.take(initialState.general.maxIterations).dropWhile(state => !state.general.converged).hasNext
 
     // If probabilistic: select the sample with the best posterior value. If deterministic: select the last sample.

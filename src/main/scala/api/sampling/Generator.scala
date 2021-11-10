@@ -7,7 +7,7 @@ import scalismo.sampling.proposals.MixtureProposal
 import scalismo.utils.Random
 import scalismo.sampling.proposals.MixtureProposal.implicits._
 
-case class Generator[State <: GingrRegistrationState[State]](implicit rnd: Random) {
+class Generator[State <: GingrRegistrationState[State]](implicit rnd: Random) {
 
   val defaultTranslation = 0.1
   val defaultRotation = 0.01

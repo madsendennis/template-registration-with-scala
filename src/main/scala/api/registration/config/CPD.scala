@@ -3,10 +3,10 @@ package api.registration.config
 import api.registration.utils.PointSequenceConverter
 import api.GingrAlgorithm
 import api.{CorrespondencePairs, GeneralRegistrationState, GingrConfig, GingrRegistrationState}
-import breeze.linalg.{Axis, DenseMatrix, DenseVector, sum, tile}
+import breeze.linalg.{sum, tile, Axis, DenseMatrix, DenseVector}
 import scalismo.common.PointId
 import scalismo.geometry.Point.Point3DVectorizer
-import scalismo.geometry.{Point, _3D}
+import scalismo.geometry.{_3D, Point}
 import scalismo.statisticalmodel.MultivariateNormalDistribution
 
 object CPDCorrespondence {
@@ -53,7 +53,7 @@ case class CpdRegistrationState(general: GeneralRegistrationState, config: CpdCo
     P /:/ den
   }
 
-  override private[api] def updateGeneral(update: GeneralRegistrationState): CpdRegistrationState = this.copy(general = update)
+  override def updateGeneral(update: GeneralRegistrationState): CpdRegistrationState = this.copy(general = update)
 }
 
 object CpdRegistrationState {
@@ -84,7 +84,9 @@ object CpdRegistrationState {
 case class CpdConfiguration(
   override val maxIterations: Int = 100,
   override val converged: (GeneralRegistrationState, GeneralRegistrationState) => Boolean = (last: GeneralRegistrationState, current: GeneralRegistrationState) => {
-    last.sigma2 == current.sigma2 || current.sigma2 < current.threshold || current.sigma2 > last.sigma2
+    val minSigma = last.sigma2 - current.sigma2
+    println(s"Sigmas: ${minSigma}, ${last.sigma2 - current.sigma2 < current.threshold}")
+    last.sigma2 - current.sigma2 < current.threshold
   },
   override val useLandmarkCorrespondence: Boolean = true,
   initialSigma: Option[Double] = None,

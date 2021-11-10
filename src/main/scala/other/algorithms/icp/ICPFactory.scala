@@ -1,6 +1,6 @@
-package other.icp
+package other.algorithms.icp
 
-import api.registration.utils.Registrator
+import other.utils.Registrator
 import scalismo.common.{UnstructuredPoints, Vectorizer}
 import scalismo.geometry.{NDSpace, Point}
 
@@ -10,17 +10,12 @@ import scalismo.geometry.{NDSpace, Point}
  A python implementation already exists from where parts of the implementation is from: https://github.com/siavashk/pycpd
  */
 class ICPFactory[D: NDSpace](
-                              val templatePoints: UnstructuredPoints[D],
-                            )(
-                              implicit val vectorizer: Vectorizer[Point[D]],
-                              registrator: Registrator[D]
-                            ) {
+  val templatePoints: UnstructuredPoints[D]
+)(implicit
+  val vectorizer: Vectorizer[Point[D]],
+  registrator: Registrator[D]
+) {
   def registerRigidly(targetPoints: UnstructuredPoints[D]): RigidICP[D] = {
     new RigidICP[D](targetPoints, this)
   }
-
-  def registerAffine(targetPoints: UnstructuredPoints[D]): RigidICP[D] = {
-    new AffineICP[D](targetPoints, this)
-  }
-
 }
