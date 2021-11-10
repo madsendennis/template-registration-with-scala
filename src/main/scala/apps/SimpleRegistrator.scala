@@ -57,13 +57,13 @@ class SimpleRegistrator[State <: GingrRegistrationState[State], Algorithm <: Gin
       mode = evaluationMode,
       evaluatedPoints = evaluatedPoints
     )
-    val jsonLogger: JSONStateLogger[State] = JSONStateLogger(evaluator)
-    val visualLogger: CallBackFunctions.visualLogger[State] = CallBackFunctions.visualLogger(Some(jsonLogger), modelView)
+    val jsonLogger = if (probabilistic) Some(JSONStateLogger(evaluator)) else None
+    val visualLogger = CallBackFunctions.visualLogger(jsonLogger, modelView)
 
     val finalState = algorithm.run(
       initialState = state,
-      callBackLogger = visualLogger,
       acceptRejectLogger = jsonLogger,
+      callBackLogger = visualLogger,
       probabilisticSettings = if (probabilistic) Some(ProbabilisticSettings[State](evaluator)) else None
     )
     val fit = ModelFittingParameters.modelInstanceShapePoseScale(model, finalState.general.modelParameters)

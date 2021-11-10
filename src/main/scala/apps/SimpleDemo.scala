@@ -1,20 +1,18 @@
 package apps
 
-import java.io.File
-
 import api.registration.config.{CpdConfiguration, CpdRegistration, CpdRegistrationState}
-import scalismo.geometry._3D
-import scalismo.io.{MeshIO, StatisticalModelIO}
-import scalismo.mesh.TriangleMesh
+import scalismo.geometry.{EuclideanVector, Point}
+import scalismo.transformations.{Rotation, Translation, TranslationAfterRotation}
 import scalismo.utils.Random.implicits.randomGenerator
 
 object SimpleDemo extends App {
   scalismo.initialize()
 
-  val model = StatisticalModelIO.readStatisticalTriangleMeshModel3D(new File("data/femur_gp_model_50-components.h5")).get
-  val target: TriangleMesh[_3D] = MeshIO.readMesh(new File("data/femur_target.stl")).get
+  val rigidOffset = TranslationAfterRotation(Translation(EuclideanVector(0, 0, 0)), Rotation(0, 0, 0, Point(0, 0, 0)))
+  val (model, _) = DemoDatasetLoader.modelFemur()
+  val (target, _) = DemoDatasetLoader.targetFemur(offset = rigidOffset)
 
-  val configCPD = CpdConfiguration(maxIterations = 100, threshold = 1e-20)
+  val configCPD = CpdConfiguration(maxIterations = 100, threshold = 1e-10)
   val algorithmCPD = new CpdRegistration()
 
   val simpleRegistration = new SimpleRegistrator[CpdRegistrationState, CpdRegistration, CpdConfiguration](
@@ -23,5 +21,6 @@ object SimpleDemo extends App {
     algorithmCPD,
     configCPD
   )
-  val finalCPD = simpleRegistration.runDecimated(modelPoints = 200, targetPoints = 200, probabilistic = false)
+
+  val finalCPD = simpleRegistration.runDecimated(modelPoints = 100, targetPoints = 100, probabilistic = true)
 }

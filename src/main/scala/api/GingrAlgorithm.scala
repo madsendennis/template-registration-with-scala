@@ -152,8 +152,8 @@ trait GingrAlgorithm[State <: GingrRegistrationState[State]] {
     */
   def run(
     initialState: State,
+    acceptRejectLogger: Option[AcceptRejectLogger[State]],
     callBackLogger: ChainStateLogger[State] = EmptyChainStateLogger(),
-    acceptRejectLogger: AcceptRejectLogger[State] = EmptyAcceptRejectLogger(),
     probabilisticSettings: Option[ProbabilisticSettings[State]],
     generators: Option[ProposalGenerator[State] with TransitionProbability[State]] = None
   )(implicit rnd: Random): State = {
@@ -163,8 +163,9 @@ trait GingrAlgorithm[State <: GingrRegistrationState[State]] {
     val bestSampleLogger = BestAndCurrentSampleLogger[State](registrationEvaluator)
     val logs = ChainStateLoggerContainer(Seq(callBackLogger, bestSampleLogger))
     val mhChain = MetropolisHastings[State](registrationGenerator, registrationEvaluator)
+    val allStepLogger: AcceptRejectLogger[State] = acceptRejectLogger.getOrElse(EmptyAcceptRejectLogger())
 
-    val states = mhChain.iterator(initialState, acceptRejectLogger).loggedWith(logs)
+    val states = mhChain.iterator(initialState, allStepLogger).loggedWith(logs)
 
     // we need to query if there is a next element, otherwise due to laziness the chain is not calculated
     var currentState: Option[GeneralRegistrationState] = None
