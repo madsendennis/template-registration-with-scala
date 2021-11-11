@@ -44,6 +44,7 @@ case class GeneralRegistrationState(
     this.copy(modelParameters = this.modelParameters.copy(shape = next))
   }
   override private[api] def updateModelParameters(next: ModelFittingParameters): GeneralRegistrationState = this.copy(modelParameters = next)
+  override private[api] def updateSigma2(next: Double): GeneralRegistrationState = this.copy(sigma2 = next)
   override private[api] def updateGeneratedBy(next: String): GeneralRegistrationState = this.copy(generatedBy = next)
 
   lazy val landmarkCorrespondences: IndexedSeq[(PointId, Point[_3D], MultivariateNormalDistribution)] = {

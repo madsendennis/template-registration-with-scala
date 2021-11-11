@@ -18,7 +18,7 @@ import scalismo.statisticalmodel.{MultivariateNormalDistribution, PointDistribut
 import scalismo.transformations.{Scaling, TranslationAfterRotation, TranslationAfterScalingAfterRotation, TranslationAfterScalingAfterRotationSpace3D}
 import scalismo.utils.{Memoize, Random}
 
-case class ProbabilisticSettings[State <: GingrRegistrationState[State]](evaluators: Evaluator[State], randomMixture: Double = 0.3) {
+case class ProbabilisticSettings[State <: GingrRegistrationState[State]](evaluators: Evaluator[State], randomMixture: Double = 0.5) {
   require(randomMixture >= 0.0 && randomMixture <= 1.0)
 }
 
@@ -62,8 +62,8 @@ trait GingrAlgorithm[State <: GingrRegistrationState[State]] {
   }
   private val cashedPosterior = Memoize(computePosterior, 10)
 
-  def updateSigma2(current: State): State = {
-    current
+  def updateSigma2(current: State): Double = {
+    current.general.sigma2
   }
 
   def update(current: State, probabilistic: Boolean)(implicit rnd: Random): State = {
@@ -96,7 +96,9 @@ trait GingrAlgorithm[State <: GingrRegistrationState[State]] {
       .updateRotation(newGlobalAlignment.rotation)
       .updateScaling(ScaleParameter(globalTransform.scaling.s))
       .updateShapeParameters(ShapeParameters(alpha))
-    updateSigma2(current.updateGeneral(general))
+    val newState = current.updateGeneral(general)
+    val newSigma2 = updateSigma2(newState)
+    newState.updateGeneral(newState.general.updateSigma2(newSigma2))
   }
 
   def estimateRigidTransform(current: TriangleMesh[_3D], update: IndexedSeq[(PointId, Point[_3D])]): TranslationAfterScalingAfterRotation[_3D] = {

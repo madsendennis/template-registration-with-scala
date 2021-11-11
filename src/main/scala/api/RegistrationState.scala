@@ -31,5 +31,6 @@ trait RegistrationState[T] {
   private[api] def updateScaling(next: ScaleParameter): T
   private[api] def updateShapeParameters(next: ShapeParameters): T
   private[api] def updateModelParameters(next: ModelFittingParameters): T
+  private[api] def updateSigma2(next: Double): T
   private[api] def updateGeneratedBy(next: String): T
 }

@@ -102,7 +102,7 @@ class CpdRegistration(
   val dataConverter: PointSequenceConverter[_3D] = PointSequenceConverter.denseMatrixToPoint3DSequence
 
   // possibility to override the update function, or just use the base class method?
-  override def updateSigma2(current: CpdRegistrationState): CpdRegistrationState = {
+  override def updateSigma2(current: CpdRegistrationState): Double = {
     val meanUpdate = current.general.fit.pointSet.points.toSeq
     val P = current.P
     val X = dataConverter.toMatrix(current.general.target.pointSet.points.toSeq)
@@ -115,7 +115,6 @@ class CpdRegistration(
     val yPy: Double = P1.t * sum(TY *:* TY, Axis._1)
     val trPXY: Double = sum(TY *:* (P * X))
     val sigma2 = (xPx - 2 * trPXY + yPy) / (Np * 3.0)
-    val newGeneral = current.general.copy(sigma2 = sigma2)
-    current.copy(general = newGeneral)
+    sigma2
   }
 }

@@ -52,8 +52,8 @@ class IcpRegistration(
 ) extends GingrAlgorithm[IcpRegistrationState] {
   def name = "ICP"
   // possibility to override the update function, or just use the base class method?
-  override def updateSigma2(current: IcpRegistrationState): IcpRegistrationState = {
-    val newGeneral = current.general.copy(sigma2 = current.general.sigma2 - current.config.sigmaStep)
-    current.copy(general = newGeneral)
+  override def updateSigma2(current: IcpRegistrationState): Double = {
+    val newSigma = current.general.sigma2 - current.config.sigmaStep
+    newSigma
   }
 }

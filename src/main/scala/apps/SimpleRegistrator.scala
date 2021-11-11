@@ -25,10 +25,12 @@ class SimpleRegistrator[State <: GingrRegistrationState[State], Algorithm <: Gin
   showInUI: Boolean = true
 )(implicit stateHandler: StateHandler[State, Config], rnd: Random) {
 
-  lazy val initialState: State = {
+  def createInitialState(model: PointDistributionModel[_3D, TriangleMesh], target: TriangleMesh[_3D]): State = {
     val generalState = GeneralRegistrationState(model, target, transform)
     stateHandler.initialize(generalState, config)
   }
+
+  lazy val initialState: State = createInitialState(model, target)
 
   val ui: SimpleAPI with SimpleAPIDefaultImpl = if (showInUI) ScalismoUI() else ScalismoUIHeadless()
   private val modelGroup = ui.createGroup("model")
@@ -38,19 +40,23 @@ class SimpleRegistrator[State <: GingrRegistrationState[State], Algorithm <: Gin
   val modelView: PointDistributionModelViewControlsTriangleMesh3D = ui.show(modelGroup, model, "model")
   val targetView: TriangleMeshView = ui.show(targetGroup, target, "target")
 
-  private def decimateState(state: State, modelPoints: Int, targetPoints: Int): State = {
+  private def decimateState(state: Option[State], modelPoints: Int, targetPoints: Int): State = {
     val newRef = model.reference.operations.decimate(modelPoints)
     val decimatedModel = model.newReference(newRef, NearestNeighborInterpolator())
     val decimatedTarget = target.operations.decimate(targetPoints)
-    state.updateGeneral(
-      state.general.copy(
+    val initState = state.getOrElse(createInitialState(decimatedModel, decimatedTarget))
+    initState.updateGeneral(
+      initState.general.copy(
         model = decimatedModel,
         target = decimatedTarget,
-        fit = ModelFittingParameters.modelInstanceShapePoseScale(decimatedModel, state.general.modelParameters)
+        fit = ModelFittingParameters.modelInstanceShapePoseScale(decimatedModel, initState.general.modelParameters)
       ))
   }
 
   def run(state: State = initialState, probabilistic: Boolean = false): State = {
+    println(s"RUN!!! model: ${state.general.model.reference.pointSet.numberOfPoints}, target: ${state.general.target.pointSet.numberOfPoints}")
+    modelView.shapeModelTransformationView.shapeTransformationView.coefficients = state.general.modelParameters.shape.parameters
+    modelView.shapeModelTransformationView.poseTransformationView.transformation = state.general.modelParameters.rigidTransform
     val evaluator: IndependtPoints[State] = IndependtPoints(
       state = state,
       uncertainty = evaluatorUncertainty,
@@ -73,7 +79,7 @@ class SimpleRegistrator[State <: GingrRegistrationState[State], Algorithm <: Gin
     finalState
   }
 
-  def runDecimated(modelPoints: Int, targetPoints: Int, state: State = initialState, probabilistic: Boolean = false): State = {
+  def runDecimated(modelPoints: Int, targetPoints: Int, state: Option[State] = None, probabilistic: Boolean = false): State = {
     val initState = decimateState(state, modelPoints, targetPoints)
     run(initState, probabilistic)
   }
