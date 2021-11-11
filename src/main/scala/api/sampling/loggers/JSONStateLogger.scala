@@ -64,7 +64,7 @@ case class JSONStateLogger[State <: GingrRegistrationState[State]](evaluators: E
     f
   }
 
-  def totalSamples: Int = numOfRejected + numOfAccepted
+  def totalSamples: Int = numOfRejected + numOfAccepted + 1
 
   val log: ListBuffer[jsonLogFormat] = new ListBuffer[jsonLogFormat]
 

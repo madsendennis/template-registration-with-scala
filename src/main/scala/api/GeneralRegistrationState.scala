@@ -96,7 +96,6 @@ object GeneralRegistrationState {
     target: TriangleMesh[_3D],
     targetLandmarks: Seq[Landmark[_3D]],
     transform: GlobalTranformationType
-//    nonRigidTransformation: Boolean
   ): GeneralRegistrationState = {
     val modelPars = ModelFittingParameters(
       scale = ScaleParameter(1.0),
