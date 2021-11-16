@@ -1,16 +1,24 @@
 package api.registration.config
 
+import java.io.File
+
 import api.registration.utils.NonRigidClosestPointRegistrator.ClosestPointTriangleMesh3D
 import api._
+import apps.paperFigures.ioStuff.{convertDiscreteFieldToVtkPolyData, writeVTKPdasVTK}
 import breeze.linalg.{DenseMatrix, DenseVector}
-import scalismo.common.PointId
+import scalismo.common.{DiscreteField, DiscreteField3D, PointId, UnstructuredPointsDomain}
+import scalismo.geometry.{_3D, EuclideanVector}
 import scalismo.statisticalmodel.MultivariateNormalDistribution
 
 object ICPCorrespondence {
   def estimate[T](state: IcpRegistrationState): CorrespondencePairs = {
     val source = state.general.fit
     val target = state.general.target
-    val corr = ClosestPointTriangleMesh3D.closestPointCorrespondence(source, target)
+    val corr =
+      if (state.config.reverseCorrespondenceDirection)
+        ClosestPointTriangleMesh3D.closestPointCorrespondenceTargetToTemplate(source, target)
+      else
+        ClosestPointTriangleMesh3D.closestPointCorrespondence(source, target)
     CorrespondencePairs(pairs = corr._1.filter(_._3 == 1.0).map(f => (f._1, f._2)).toIndexedSeq)
   }
 }
@@ -22,7 +30,8 @@ case class IcpConfiguration(
     (last: GeneralRegistrationState, current: GeneralRegistrationState, threshold: Double) => false,
   override val useLandmarkCorrespondence: Boolean = true,
   initialSigma: Double = 100.0,
-  endSigma: Double = 1.0
+  endSigma: Double = 1.0,
+  reverseCorrespondenceDirection: Boolean = false
 ) extends GingrConfig {
   val sigmaStep: Double = (initialSigma - endSigma) / maxIterations.toDouble
 }

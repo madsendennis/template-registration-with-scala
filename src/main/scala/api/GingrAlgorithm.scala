@@ -166,6 +166,7 @@ trait GingrAlgorithm[State <: GingrRegistrationState[State]] {
     val logs = ChainStateLoggerContainer(Seq(callBackLogger, bestSampleLogger))
     val mhChain = MetropolisHastings[State](registrationGenerator, registrationEvaluator)
     val allStepLogger: AcceptRejectLogger[State] = acceptRejectLogger.getOrElse(EmptyAcceptRejectLogger())
+    acceptRejectLogger.foreach(_.accept(initialState, initialState, registrationGenerator, registrationEvaluator))
 
     val states = mhChain.iterator(initialState, allStepLogger).loggedWith(logs)
 

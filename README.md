@@ -28,21 +28,33 @@ Implementation of the non-rigid ICP algorithms from https://gravis.dmi.unibas.ch
 
 # Todo
 ## GiNGR
- - [ ] Usage of landmarks 
-    - [ ] pre-alignment
-    - [ ] fitting of posterior model
-    - [ ] include landmarks in correspondence pairs)
- - [ ] Multiresolution fitting
- - [ ] BCPD implementation
- - [ ] General D implementation instead of _3D
- - [ ] General topology type instead of TriangleMesh
- - [ ] Allow for global rigid alignment in each step (BCPD style)
- - [ ] Efficient P computation for CPD
- - [ ] Logger to enable/disable fitting info
- - [ ] Scalismo-UI hook - to visually see the update steps
- - [ ] Update framework to allow for probabilitic steps (with MH)
-    - [ ] General correspondence proposal
- 
- 
-## Bugs
- - [ ] Iterator in GiNGR hard set to max 100
+
+\begin{algorithm}[t]
+	\SetAlgoLined
+	\KwIn{$\Gamma_T$ target mesh, \\\hspace{3.0em}GPMM based on the reference mesh $\Gamma_R$}
+	\KwOut{$\hat{\Gamma}_R$ based on the best or final $\bm{\alpha}$ state\;}
+	\KwData{
+	set GPMM parameter, e.g. $\bm{\alpha}^0=\bm{0}$\;
+	\hspace{3.0em}initialize correspondence uncertainty $\sigma^2$\;
+		}
+    \While{While (Deterministic: not converged, Probabilistic: max iteration not reached)}{
+        Estimate correspondence deformations $\hat{U}$\;
+		Perform GPR, i.e. compute $\mathcal{GP}_p$\;
+        \eIf{Stochastic}
+        {
+            Draw random proposal $\bm{\alpha}'$ from $\mathcal{GP}_p$\;
+            \eIf{Accepted}
+            {
+                Update current state: $\bm{\alpha}^{i+1} = \bm{\alpha}'$\;
+            }
+            {
+                Stay in previous state: $\bm{\alpha}^{i+1} = \bm{\alpha}^{i}$\;
+            }
+        }{
+            Set $\bm{\alpha}^{i+1}$ to mean from $\mathcal{GP}_p$\;
+        }
+		Update correspondence uncertainty $\sigma^2$\;
+	}
+	\caption{GiNGR registration}
+	\label{algo:GiNGR-steps}
+\end{algorithm}

@@ -24,11 +24,12 @@ case class DotProductKernel[D](kernel: PDKernel[D], gamma: Double) extends PDKer
   override def domain: EuclideanSpace[D] = EuclideanSpace[D]
 
   override def k(x: Point[D], y: Point[D]): Double = {
-    val xh = DenseMatrix(x.toArray :+ gamma)
-    val yh = DenseMatrix(y.toArray :+ gamma)
-    val inner = DenseMatrix.eye[Double](x.dimensionality + 1) * kernel(x, y)
-    val out = xh * inner * yh.t
-    out(0, 0)
+//    val xh = DenseMatrix(x.toArray :+ gamma)
+//    val yh = DenseMatrix(y.toArray :+ gamma)
+//    val inner = DenseMatrix.eye[Double](x.dimensionality + 1) * kernel(x, y)
+//    val out = xh * inner * yh.t
+//    out(0, 0)
+    x.toBreezeVector.dot(y.toBreezeVector)
   }
 }
 

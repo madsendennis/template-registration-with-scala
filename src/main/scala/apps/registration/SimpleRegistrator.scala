@@ -7,11 +7,13 @@ import api.sampling.evaluators.{EvaluationMode, ModelToTargetEvaluation}
 import api.sampling.loggers.JSONStateLogger
 import api._
 import scalismo.common.interpolation.NearestNeighborInterpolator
-import scalismo.geometry.{_3D, Landmark}
+import scalismo.geometry.{Landmark, _3D}
 import scalismo.mesh.TriangleMesh
 import scalismo.statisticalmodel.PointDistributionModel
 import scalismo.ui.api._
 import scalismo.utils.Random
+
+import java.io.File
 
 class SimpleRegistrator[State <: GingrRegistrationState[State], Algorithm <: GingrAlgorithm[State], Config <: GingrConfig](
   model: PointDistributionModel[_3D, TriangleMesh],
@@ -24,6 +26,7 @@ class SimpleRegistrator[State <: GingrRegistrationState[State], Algorithm <: Gin
   evaluatorUncertainty: Double = 1.0,
   evaluatedPoints: Option[Int] = None,
   evaluationMode: EvaluationMode = ModelToTargetEvaluation,
+  jsonFile: Option[File] = None,
   showInUI: Boolean = true,
   name: String = ""
 )(implicit stateHandler: StateHandler[State, Config], rnd: Random) {
@@ -69,7 +72,7 @@ class SimpleRegistrator[State <: GingrRegistrationState[State], Algorithm <: Gin
       mode = evaluationMode,
       evaluatedPoints = evaluatedPoints
     )
-    val jsonLogger = if (probabilistic) Some(JSONStateLogger(evaluator)) else None
+    val jsonLogger = if (probabilistic) Some(JSONStateLogger(evaluator, jsonFile)) else None
     val visualLogger = CallBackFunctions.visualLogger(jsonLogger, modelView)
 
     val finalState = algorithm.run(
@@ -79,7 +82,7 @@ class SimpleRegistrator[State <: GingrRegistrationState[State], Algorithm <: Gin
       probabilisticSettings = if (probabilistic) Some(ProbabilisticSettings[State](evaluator, randomMixture = randomMixture)) else None
     )
     val fit = ModelFittingParameters.modelInstanceShapePoseScale(model, finalState.general.modelParameters)
-
+    jsonLogger.foreach(_.writeLog())
     ui.show(finalGroup, fit, "fit")
     println("Final registration with full resolution meshes:")
     RegistrationComparison.evaluateReconstruction2GroundTruthBoundaryAware("", fit, target)

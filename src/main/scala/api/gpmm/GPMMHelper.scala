@@ -95,6 +95,10 @@ case class PointSetHelper[D, DDomain[D] <: DiscreteDomain[D]](reference: DDomain
 case class GaussianKernelParameters(sigma: Double, scaling: Double)
 
 case class GPMMTriangleMesh3D(reference: TriangleMesh[_3D], relativeTolerance: Double)(implicit gpmm: GPMM[_3D, TriangleMesh]) {
+  def Gaussian(sigma: Double, scaling: Double): PointDistributionModel[_3D, TriangleMesh] = {
+    val kernel = GaussianKernel[_3D](sigma) * scaling
+    gpmm.construct(reference, DiagonalKernel(kernel, 3), relativeTolerance)
+  }
   def GaussianSymmetry(sigma: Double, scaling: Double): PointDistributionModel[_3D, TriangleMesh] = {
     val kernel = GaussianKernel[_3D](sigma) * scaling
     val symmKernel = KernelHelper.symmetrizeKernel(kernel)

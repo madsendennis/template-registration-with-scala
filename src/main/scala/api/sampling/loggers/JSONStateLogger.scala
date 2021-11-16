@@ -1,17 +1,21 @@
 package api.sampling.loggers
 
-import api.GingrRegistrationState
+import api.{EulerAngles, EulerRotation, GeneralRegistrationState, GingrRegistrationState, ModelFittingParameters, PoseParameters, ScaleParameter, ShapeParameters}
 import spray.json.DefaultJsonProtocol.jsonFormat10
 import spray.json.RootJsonFormat
 import spray.json.DefaultJsonProtocol._
 import spray.json._
 import scalismo.sampling.{DistributionEvaluator, ProposalGenerator}
 import scalismo.sampling.loggers.AcceptRejectLogger
+
 import java.io.{BufferedWriter, File, FileOutputStream, IOException, OutputStreamWriter}
 import java.text.SimpleDateFormat
 import java.util.Calendar
-
 import api.sampling.Evaluator
+import breeze.linalg.DenseVector
+import scalismo.geometry.{EuclideanVector, Point, _3D}
+import scalismo.mesh.TriangleMesh
+import scalismo.statisticalmodel.PointDistributionModel
 
 import scala.collection.SortedSet
 import scala.collection.mutable.ListBuffer
@@ -64,7 +68,7 @@ case class JSONStateLogger[State <: GingrRegistrationState[State]](evaluators: E
     f
   }
 
-  def totalSamples: Int = numOfRejected + numOfAccepted + 1
+  def totalSamples: Int = numOfRejected + numOfAccepted
 
   val log: ListBuffer[jsonLogFormat] = new ListBuffer[jsonLogFormat]
 
@@ -80,7 +84,6 @@ case class JSONStateLogger[State <: GingrRegistrationState[State]](evaluators: E
   }
 
   override def accept(current: State, sample: State, generator: ProposalGenerator[State], evaluator: DistributionEvaluator[State]): Unit = {
-    numOfAccepted += 1
     val evalValue = mapEvaluators(sample)
     log += jsonLogFormat(
       totalSamples,
@@ -94,11 +97,11 @@ case class JSONStateLogger[State <: GingrRegistrationState[State]](evaluators: E
       sample.general.modelParameters.scale.s,
       datetimeFormat.format(Calendar.getInstance().getTime)
     )
+    numOfAccepted += 1
   }
 
   // The rejected state will contain the same parameters as the previous accepted state, so no need to double store all the information
   override def reject(current: State, sample: State, generator: ProposalGenerator[State], evaluator: DistributionEvaluator[State]): Unit = {
-    numOfRejected += 1
     val evalValue = mapEvaluators(sample)
     log += jsonLogFormat(
       totalSamples,
@@ -112,6 +115,7 @@ case class JSONStateLogger[State <: GingrRegistrationState[State]](evaluators: E
       sample.general.modelParameters.scale.s,
       datetimeFormat.format(Calendar.getInstance().getTime)
     )
+    numOfRejected += 1
   }
 
   def percentRejected: Double = BigDecimal(numOfRejected.toDouble / totalSamples.toDouble).setScale(2, BigDecimal.RoundingMode.HALF_UP).toDouble
@@ -119,31 +123,32 @@ case class JSONStateLogger[State <: GingrRegistrationState[State]](evaluators: E
   def percentAccepted: Double = 1.0 - percentRejected
 
   def writeLog(): Unit = {
-    if (filePath.isEmpty) {
-      throw new IOException(s"JSON log path does not exist: ${filePath.getOrElse(new File("")).getParentFile.toString}!")
-    } else {
-      val content = log.toIndexedSeq
-      try {
-        val writer = new BufferedWriter(new OutputStreamWriter(new FileOutputStream(filePath.toString)))
-        writer.write(content.toList.toJson.prettyPrint)
-        writer.close()
-      } catch {
-        case e: Exception => throw new IOException("Writing JSON log file failed!")
-      }
-      println("Log written to: " + filePath.toString)
+    filePath match{
+      case Some(file) =>
+        val content = log.toIndexedSeq
+        try {
+          val writer = new BufferedWriter(new OutputStreamWriter(new FileOutputStream(file.toString)))
+          writer.write(content.toList.toJson.prettyPrint)
+          writer.close()
+        } catch {
+          case e: Exception => throw new IOException("Writing JSON log file failed!")
+        }
+        println("Log written to: " + file.toString)
+      case _ =>
+        println("JSON logFile NOT written - no filepath given")
     }
   }
 
   def printAcceptInfo(id: String = ""): Unit = {
     val lastX = 100
     println(s"${id} Total accepted (${totalSamples}): ${percentAccepted}")
-    generatedBy.foreach { name =>
+    generatedBy.filter(_.nonEmpty).foreach { name =>
       println(s"${id} ${name}: ${percentAcceptedOfType(name)}")
     }
     if (log.length > lastX) {
       val logLastX = log.takeRight(lastX)
       println(s"${id} Last ${lastX} samples accepted (${lastX}): ${logLastX.map(f => if (f.status) 1.0 else .0).sum / lastX.toDouble}")
-      generatedBy.foreach { name =>
+      generatedBy.filter(_.nonEmpty).foreach { name =>
         println(s"${id} ${name}: ${percentAcceptedOfTypeLocal(name, logLastX)}")
       }
     }
@@ -181,10 +186,23 @@ object JSONStateLogger {
     data
   }
 
-  // TODO: Convert JSON entry to State format
-//  def getBestStateFromJSON[State <: GingrRegistrationState[State]](filePath: File): State = {
-//    val loggerSeq = loadLog(filePath).filter(_.status)
-//    val bestSample = loggerSeq.sortBy(f => f.logvalue("product")).reverse.head
-//    bestSample
-//  }
+  def jsonFormatToModelFittingParameters(jsonFormat: jsonLogFormat): ModelFittingParameters =  {
+    require(jsonFormat.rotation.length == 3 && jsonFormat.rotationCenter.length == 3)
+    ModelFittingParameters(
+      scale = ScaleParameter(jsonFormat.scaling),
+      pose = PoseParameters(
+        translation = EuclideanVector(jsonFormat.translation.toArray),
+        rotation = EulerRotation(
+          angles = EulerAngles(jsonFormat.rotation(0), jsonFormat.rotation(1), jsonFormat.rotation(2)),
+          center = Point.fromBreezeVector(DenseVector(jsonFormat.rotationCenter.toArray)),
+        )
+      ),
+      shape = ShapeParameters(DenseVector(jsonFormat.modelParameters.toArray)),
+    )
+  }
+
+  def getBestStateFromLog(log: IndexedSeq[jsonLogFormat]): jsonLogFormat = {
+    val bestSample = log.sortBy(f => f.logvalue("product")).reverse.head
+    bestSample
+  }
 }

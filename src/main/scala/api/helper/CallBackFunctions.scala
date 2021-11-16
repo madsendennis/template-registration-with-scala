@@ -23,9 +23,9 @@ object CallBackFunctions {
       }
       if (counter % printUpdateFrequency == 0 && counter > 1) {
         jsonLogger.foreach(_.printAcceptInfo())
+        jsonLogger.foreach{log => log.filePath.foreach(_ => log.writeLog())}
         RegistrationComparison.evaluateReconstruction2GroundTruthBoundaryAware("", sample.general.fit, sample.general.target)
       }
     }
   }
-
 }

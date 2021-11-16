@@ -14,6 +14,7 @@ object DemoDatasetLoader {
   val dataPath = new File("data")
   val pathFemur = new File(dataPath, "femur")
   val pathArmadillo = new File(dataPath, "armadillo")
+  val pathBunny = new File(dataPath, "bunny")
 
   def referenceFemur(): (TriangleMesh[_3D], Seq[Landmark[_3D]]) = {
     val reference = MeshIO.readMesh(new File(pathFemur, "femur_reference.stl")).get
@@ -52,4 +53,16 @@ object DemoDatasetLoader {
     val landmarks = LandmarkIO.readLandmarksJson3D(new File(pathArmadillo, "armadillo_karate.json")).get.map(_.transform(offset))
     (target, landmarks)
   }
+
+  def referenceBunny(): (TriangleMesh[_3D], Seq[Landmark[_3D]]) = {
+    val reference = MeshIO.readMesh(new File(pathBunny, "bunny_reference.ply")).get
+    (reference, Seq())
+  }
+
+  def targetBunny(offset: TranslationAfterRotation[_3D] = TranslationAfterRotationSpace3D(Point(0, 0, 0)).identityTransformation)(implicit
+    rnd: Random): (TriangleMesh[_3D], Seq[Landmark[_3D]]) = {
+    val target = MeshIO.readMesh(new File(pathBunny, "target.ply")).get.transform(offset)
+    (target, Seq())
+  }
+
 }

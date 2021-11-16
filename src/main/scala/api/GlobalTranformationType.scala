@@ -1,6 +1,6 @@
 package api
 
-trait GlobalTranformationType
+sealed trait GlobalTranformationType
 
 case object SimilarityTransforms extends GlobalTranformationType
 case object RigidTransforms extends GlobalTranformationType

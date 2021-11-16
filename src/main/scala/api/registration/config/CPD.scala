@@ -1,12 +1,15 @@
 package api.registration.config
 
+import java.io.File
+
 import api.registration.utils.PointSequenceConverter
 import api.GingrAlgorithm
 import api.{CorrespondencePairs, GeneralRegistrationState, GingrConfig, GingrRegistrationState}
+import apps.paperFigures.ioStuff.{convertDiscreteFieldToVtkPolyData, writeVTKPdasVTK}
 import breeze.linalg.{sum, tile, Axis, DenseMatrix, DenseVector}
-import scalismo.common.PointId
+import scalismo.common.{DiscreteField, DiscreteField3D, PointId, UnstructuredPointsDomain}
 import scalismo.geometry.Point.Point3DVectorizer
-import scalismo.geometry.{_3D, Point}
+import scalismo.geometry.{_3D, EuclideanVector, Point}
 import scalismo.statisticalmodel.MultivariateNormalDistribution
 
 object CPDCorrespondence {
