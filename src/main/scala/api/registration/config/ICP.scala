@@ -4,7 +4,6 @@ import java.io.File
 
 import api.registration.utils.NonRigidClosestPointRegistrator.ClosestPointTriangleMesh3D
 import api._
-import apps.paperFigures.ioStuff.{convertDiscreteFieldToVtkPolyData, writeVTKPdasVTK}
 import breeze.linalg.{DenseMatrix, DenseVector}
 import scalismo.common.{DiscreteField, DiscreteField3D, PointId, UnstructuredPointsDomain}
 import scalismo.geometry.{_3D, EuclideanVector}

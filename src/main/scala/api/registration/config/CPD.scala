@@ -5,7 +5,6 @@ import java.io.File
 import api.registration.utils.PointSequenceConverter
 import api.GingrAlgorithm
 import api.{CorrespondencePairs, GeneralRegistrationState, GingrConfig, GingrRegistrationState}
-import apps.paperFigures.ioStuff.{convertDiscreteFieldToVtkPolyData, writeVTKPdasVTK}
 import breeze.linalg.{sum, tile, Axis, DenseMatrix, DenseVector}
 import scalismo.common.{DiscreteField, DiscreteField3D, PointId, UnstructuredPointsDomain}
 import scalismo.geometry.Point.Point3DVectorizer

@@ -10,7 +10,7 @@ import scalismo.ui.api.ScalismoUI
 object CreateArmadilloGPMM extends App {
   scalismo.initialize()
 
-  val (ref, _) = DemoDatasetLoader.referenceArmadillo()
+  val (ref, _) = DemoDatasetLoader.armadillo.model(Some(1000), WhichKernel)
   // Need to decimate as inverse laplacian based kernels spans the full covariance matrix
   val decimated = ref.operations.decimate(1000)
   println("Decimated")
