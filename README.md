@@ -1,7 +1,7 @@
 # GiNGR Framework
 GiNGR: Generalized Iterative Non-Rigid Point Cloud and Surface Registration Using Gaussian Process Regression. 
 
-The GiNGR framework allows you to perform non-rigid registration with an iterative algorithm that makes use of Gaussian Process Regression in each iteration to find its next state. 
+The GiNGR framework allows to perform non-rigid registration with an iterative algorithm that makes use of Gaussian Process Regression in each iteration to find its next state. 
 
 Existing algorithms can be converted into the GiNGR framework, and compared based on 3 properties:
  - Kernel function: how similar should the deformation of neighbouring points be - this is determined based on their correlation
@@ -10,14 +10,19 @@ Existing algorithms can be converted into the GiNGR framework, and compared base
 
 This framework contains a general library to input these 3 properties. 
 
+The core part of the GiNGR framework is found in `api/GingrAlgorithm` with the `update` function performing one iteration of GiNGR update.
+Different pre-implemented configuration files can be found in `api/registration/config` for CPD and ICP
+
 ## General use
 To use GiNGR, one need to specify the deformation model to use in form of a GPMM model as well as the correspondence estimation function and the uncertainty update.
 ### Define the prior model
-The creation of the GPMM is separate from the registration step. First go to `apps/gpmm/Create-GPMM` and adjust the kernel to use and the kernel parameters. After the GPMM has been computed, a UI will show up where the deformation model can be evaluated by sampling from it.
+The creation of the GPMM is separate from the registration step. First go to `apps/gpmm` where demo scripts have been created to compute and visualize GPMMs for an Armadillo, Bunny and a Femur bone. In the UI, the deformation model can be evaluated by sampling from it.
 ### Configure the registration algorithm
 The next step is to define the correspondence and uncertainty estimation update. 
 For this, default configurations have been implemented for CPD and ICP. 
 Simple Demo applications can be found in `apps/registration/DemoICP` and `apps/registration/DemoCPD`
+
+The demo scripts both perform deterministic and probabilistic registration one after the other. 
 
 First the configuration file have to be adjusted, which controls the hyperparameters for the selected registration method.
 Then the `SimpleRegistrator` class can be used to initialize the algorithm and run the registration.
@@ -25,17 +30,16 @@ Then the `SimpleRegistrator` class can be used to initialize the algorithm and r
 In each iteration a new GiNGR state is computed which contains the GPMM model, the current `fit`, the target as well as all the GPMM model parameters (non-rigid and global pose).
 
 ### Deterministic vs Probabilistic
-
-
 The probabilistic implementation is based on the ICP-Proposal repository: https://github.com/unibas-gravis/icp-proposal
 #### Visualizing the posterior output from probabilistic fitting
-`apps/registration/DemoPosteriorVisualizationFemur`
+The posterior output from the ICP probabilistic registration of the femur bone can be visualized with `apps/registration/DemoPosteriorVisualizationFemur`.
 
 ### Inclusion of Landmarks
-`apps/registration/DemoLandmarks`
+In `apps/registration/DemoLandmarks` we compare 10 iterations of CPD for the Armadillo with and without the use of landmarks.
 
 ### Multi-resolution fitting
-`apps/registration/DemoMultiResolution`
+In `apps/registration/DemoMultiResolution` we perform 3 different registrations of GiNGR one after the other. 
+First CPD is used on a very coarse mesh (100 vertices), then CPD is used on a medium fine mesh (500 vertices) and finally, ICP is used on a finer mesh (1000 points) to get the fine details of the target mesh.
 
 
 ## Implementation of existing algorithms
