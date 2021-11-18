@@ -1,31 +1,18 @@
 package apps.registration
 
-import api.registration.config.{CpdConfiguration, CpdRegistration, CpdRegistrationState}
+import api.RigidTransforms
 import apps.DemoDatasetLoader
-import scalismo.common.interpolation.{NearestNeighborInterpolator, TriangleMeshInterpolator3D}
-import scalismo.geometry.{EuclideanVector, Point}
-import scalismo.transformations.{Rotation, Translation, TranslationAfterRotation}
-import scalismo.ui.api.ScalismoUI
-import scalismo.utils.Random.implicits.randomGenerator
 
 object DemoLandmarks extends App {
   scalismo.initialize()
-  val (model, modelLandmarks) = DemoDatasetLoader.armadillo.modelGauss(Some(100))
+  val (model, modelLandmarks) = DemoDatasetLoader.armadillo.modelGauss(Some(10000))
   val (target, targetLandmarks) = DemoDatasetLoader.armadillo.target()
 
-  val configCPD = CpdConfiguration(maxIterations = 100, threshold = 1e-5, lambda = 1.0)
-  val algorithmCPD = new CpdRegistration()
+  // Run deterministic CPD without landmarks
+  val configNormal = new DemoConfigurations(model, target, discretization = 100, maxIterations = 10)
+  configNormal.CPD()
 
-  val simpleRegistrationLandmarks = new SimpleRegistrator[CpdRegistrationState, CpdRegistration, CpdConfiguration](
-    model,
-    target,
-    modelLandmarks = modelLandmarks,
-    targetLandmarks = targetLandmarks,
-    algorithm = algorithmCPD,
-    config = configCPD,
-    evaluatorUncertainty = 2.0
-  )
-
-  val finalCPD = simpleRegistrationLandmarks.runDecimated(modelPoints = 200, targetPoints = 200, probabilistic = false)
-
+  // Run deterministic CPD with landmarks
+  val configLandmarks = new DemoConfigurations(model, target, modelLandmarks = modelLandmarks, targetLandmarks = targetLandmarks, discretization = 100, maxIterations = 10)
+  configLandmarks.CPD()
 }

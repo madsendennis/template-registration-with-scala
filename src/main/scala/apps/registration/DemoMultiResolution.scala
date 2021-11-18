@@ -43,7 +43,7 @@ object DemoMultiResolution extends App {
   }
 
   val rigidOffset = TranslationAfterRotation(Translation(EuclideanVector(50, 50, 50)), Rotation(0.1, 0.1, 0.1, Point(0, 0, 0)))
-  val (model, _) = DemoDatasetLoader.bunny.modelGauss(decimate = Some(1000))
+  val (model, _) = DemoDatasetLoader.bunny.modelGauss()
   val (target, _) = DemoDatasetLoader.bunny.target(offset = rigidOffset)
   fit(model, target, 100, 500, 1000)
 }

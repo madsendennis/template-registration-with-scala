@@ -21,10 +21,7 @@ object GPMM {
     override def construct(reference: TriangleMesh[_3D], kernel: MatrixValuedPDKernel[_3D], relativeTolerance: Double): PointDistributionModel[_3D, TriangleMesh] = {
       val gp = GaussianProcess[_3D, EuclideanVector[_3D]](kernel)
       val lr = LowRankGaussianProcess
-
-//      PivotedCholesky.computeApproximateCholesky[_3D, NDSpace[_3D]](gp.cov, reference.pointSet.points.toIndexedSeq, stoppingCriterion = NumberOfEigenfunctions(100))
-
-//      val lowRankGP = LowRankGaussianProcess.approximateGPCholesky(reference, gp, relativeTolerance = relativeTolerance, interpolator = TriangleMeshInterpolator3D[EuclideanVector[_3D]]())
+      //      val lowRankGP = LowRankGaussianProcess.approximateGPCholesky(reference, gp, relativeTolerance = relativeTolerance, interpolator = TriangleMeshInterpolator3D())
       val lowRankGP = LowRankGaussianProcess.approximateGPCholesky(reference, gp, relativeTolerance = relativeTolerance, interpolator = NearestNeighborInterpolator())
       PointDistributionModel[_3D, TriangleMesh](reference, lowRankGP)
     }
@@ -99,6 +96,10 @@ case class GPMMTriangleMesh3D(reference: TriangleMesh[_3D], relativeTolerance: D
     val kernel = GaussianKernel[_3D](sigma) * scaling
     gpmm.construct(reference, DiagonalKernel(kernel, 3), relativeTolerance)
   }
+  def GaussianDot(sigma: Double, scaling: Double): PointDistributionModel[_3D, TriangleMesh] = {
+    val kernel = DotProductKernel(GaussianKernel[_3D](sigma), 1.0) * scaling
+    gpmm.construct(reference, DiagonalKernel(kernel, 3), relativeTolerance)
+  }
   def GaussianSymmetry(sigma: Double, scaling: Double): PointDistributionModel[_3D, TriangleMesh] = {
     val kernel = GaussianKernel[_3D](sigma) * scaling
     val symmKernel = KernelHelper.symmetrizeKernel(kernel)
@@ -135,12 +136,6 @@ case class GPMMTriangleMesh3D(reference: TriangleMesh[_3D], relativeTolerance: D
     val kernel = DiagonalKernel(DotProductKernel(LookupKernel(reference, m), gamma) * scaling, 3)
     gpmm.construct(reference, kernel, relativeTolerance)
   }
-
-//  def computeDistanceAbsMesh(model: PointDistributionModel[_3D, TriangleMesh], lmId: PointId): ScalarMeshField[Double] = {
-//    //    println(s"Model vertices: ${model.reference.pointSet.numberOfPoints}")
-//    val gaussDist: Array[Double] = model.reference.pointSet.pointIds.toSeq.map(pid => trace(DenseMatrix.create(3,3,model.gp.cov(lmId, pid).toArray.map(f => math.abs(f))))).toArray
-//    ScalarMeshField[Double](model.reference, gaussDist)
-//  }
 
   def computeDistanceAbsMesh(model: PointDistributionModel[_3D, TriangleMesh], lmId: PointId): ScalarMeshField[Double] = {
     val dist: Array[Double] = model.reference.pointSet.pointIds.toSeq.map { pid =>

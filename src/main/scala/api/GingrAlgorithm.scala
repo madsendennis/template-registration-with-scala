@@ -56,7 +56,6 @@ trait GingrAlgorithm[State <: GingrRegistrationState[State]] {
     } else {
       correspondencesWithUncertainty
     }
-
     // Need to realign model first
     current.general.model.transform(current.general.modelParameters.rigidTransform).posterior(observationsWithUncertainty)
   }

@@ -11,20 +11,19 @@ import java.io.File
 object DemoICP extends App {
   scalismo.initialize()
 
-  val rigidOffset = TranslationAfterRotation(Translation(EuclideanVector(0, 0, 0)), Rotation(0, 0, 0, Point(0, 0, 0)))
-  val (model, _) = DemoDatasetLoader.femur.modelGauss(decimate = Some(1000), scaling = 1.0, sigma = 50)
-  val (target, _) = DemoDatasetLoader.femur.target(offset = rigidOffset)
+  val (model, _) = DemoDatasetLoader.femur.modelGauss()
+  val (target, _) = DemoDatasetLoader.femur.target()
 
   // Run deterministic ICP
-  val configDeterministic = new DemoConfigurations(model, target, discretization = 100, maxIterations = 100, probabilistic = false, transform = NoTransforms)
+  val configDeterministic = new DemoConfigurations(model, target, discretization = 200, maxIterations = 100, probabilistic = false, transform = NoTransforms)
   configDeterministic.ICP()
 
   // Run probabilistic IPC
   val configProbabilistic = new DemoConfigurations(
     model,
     target,
-    discretization = 100,
-    maxIterations = 10000,
+    discretization = 200,
+    maxIterations = 1000,
     probabilistic = true,
     transform = NoTransforms,
     jsonFile = Some(new File(DemoDatasetLoader.dataPath, "femur/targetFittingICP.json")))

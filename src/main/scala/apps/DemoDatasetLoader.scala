@@ -1,6 +1,6 @@
 package apps
 
-import apps.gpmm.{GaussKernel, GaussMirrorKernel, InvLapDotKernel, InvLapKernel, SimpleTriangleModels3D, WhichKernel}
+import apps.gpmm.{GaussDotKernel, GaussKernel, GaussMirrorKernel, GaussMixKernel, InvLapDotKernel, InvLapKernel, SimpleTriangleModels3D, WhichKernel}
 import java.io.File
 
 import scalismo.common.interpolation.TriangleMeshInterpolator3D
@@ -36,7 +36,7 @@ trait DataSetLoader {
     val decstring = if (decimate.nonEmpty) decimate.get.toString else "full"
     val modelFile = new File(path, s"${name}_dec-${decstring}_${kernelSelect.name}_${kernelSelect.printpars}.h5")
     val mdec = StatisticalModelIO.readStatisticalTriangleMeshModel3D(modelFile).getOrElse {
-      println(s"File does not exist, creating: ${modelFile}")
+      println(s"Model file does not exist, creating: ${modelFile}")
       val m = SimpleTriangleModels3D.create(ref, kernelSelect, relativeTolerance = relativeTolerance)
       StatisticalModelIO.writeStatisticalTriangleMeshModel3D(m, modelFile).get
       m
@@ -54,6 +54,16 @@ trait DataSetLoader {
     scaling: Double = defaultGaussScaling,
     sigma: Double = defaultGaussSigma): (PointDistributionModel[_3D, TriangleMesh], Option[Seq[Landmark[_3D]]]) = {
     model(decimate, GaussKernel(scaling, sigma), fullResolutionReturn)
+  }
+  def modelGaussMix(decimate: Option[Int] = None, fullResolutionReturn: Boolean = true): (PointDistributionModel[_3D, TriangleMesh], Option[Seq[Landmark[_3D]]]) = {
+    model(decimate, GaussMixKernel(), fullResolutionReturn)
+  }
+  def modelGaussDot(
+    decimate: Option[Int] = None,
+    fullResolutionReturn: Boolean = true,
+    scaling: Double = defaultGaussScaling,
+    sigma: Double = defaultGaussSigma): (PointDistributionModel[_3D, TriangleMesh], Option[Seq[Landmark[_3D]]]) = {
+    model(decimate, GaussDotKernel(scaling / 1000, sigma), fullResolutionReturn)
   }
   def modelGaussMirror(
     decimate: Option[Int] = None,
@@ -83,7 +93,7 @@ object DemoDatasetLoader {
     override def name: String = "femur"
     override def path: File = new File(dataPath, name)
     override val defaultGaussSigma = 70.0
-    override val defaultGaussScaling = 30.0
+    override val defaultGaussScaling = 50.0
     override def reference(): (TriangleMesh[_3D], Option[Seq[Landmark[_3D]]]) = {
       val reference = MeshIO.readMesh(new File(path, "femur.stl")).get
       val landmarks = LandmarkIO.readLandmarksJson3D(new File(path, "femur.json")).get
@@ -101,6 +111,7 @@ object DemoDatasetLoader {
     override def path: File = new File(dataPath, name)
     override val defaultGaussSigma = 50.0
     override val defaultGaussScaling = 20.0
+    override val defaultInvLapDotScaling = 0.02
     override def reference(): (TriangleMesh[_3D], Option[Seq[Landmark[_3D]]]) = {
       val reference = MeshIO.readMesh(new File(path, "armadillo.ply")).get
       val landmarks = LandmarkIO.readLandmarksJson3D(new File(path, "armadillo.json")).get

@@ -13,9 +13,9 @@ import java.io.File
 object DemoPosteriorVisualizationFemur extends App {
   scalismo.initialize()
 
-  val burnInPhase = 1000
+  val burnInPhase = 100
 
-  val (model, _) = DemoDatasetLoader.femur.modelGauss(decimate = Some(1000))
+  val (model, _) = DemoDatasetLoader.femur.modelGauss()
   val (target, _) = DemoDatasetLoader.femur.target()
 
   val jsonFile = new File("data/femur/targetFittingICP.json")
