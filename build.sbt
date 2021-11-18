@@ -1,6 +1,6 @@
 import sbt.Resolver
 
-organization := "ch.unibas.cs.gravis"
+organization := "anonymous"
 
 name := "GiNGR"
 
@@ -22,10 +22,6 @@ libraryDependencies ++= Seq(
   "io.github.cibotech" %% "evilplot" % "0.8.+",
   "com.typesafe.scala-logging" %% "scala-logging" % "3.9.+"
 )
-
-assemblyJarName in assembly := "scala-fun.jar"
-
-mainClass in assembly := Some("example.ExampleApp")
 
 assemblyMergeStrategy in assembly := {
   case PathList("META-INF", "MANIFEST.MF") => MergeStrategy.discard
