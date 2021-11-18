@@ -32,8 +32,8 @@ object SimpleTriangleModels3D {
     val model = kernelSelect match {
       case InvLapKernel(s) => GPMMTriangleMesh3D(reference, relativeTolerance = relativeTolerance).InverseLaplacian(scaling = s)
       case InvLapDotKernel(s, g) => GPMMTriangleMesh3D(reference, relativeTolerance = relativeTolerance).InverseLaplacianDot(scaling = s, gamma = g)
-      case GaussKernel(s, sigma) => GPMMTriangleMesh3D(reference, relativeTolerance = relativeTolerance).Gaussian(sigma = s, scaling = sigma)
-      case GaussMirrorKernel(s, sigma) => GPMMTriangleMesh3D(reference, relativeTolerance = relativeTolerance).GaussianSymmetry(sigma = s, sigma)
+      case GaussKernel(s, sigma) => GPMMTriangleMesh3D(reference, relativeTolerance = relativeTolerance).Gaussian(sigma = sigma, scaling = s)
+      case GaussMirrorKernel(s, sigma) => GPMMTriangleMesh3D(reference, relativeTolerance = relativeTolerance).GaussianSymmetry(sigma = sigma, s)
     }
     model
   }

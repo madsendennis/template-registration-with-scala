@@ -81,6 +81,7 @@ trait GingrAlgorithm[State <: GingrRegistrationState[State]] {
     val currentFitNotAligned =
       current.general.fit.transform(current.general.modelParameters.rigidTransform.inverse).transform(current.general.modelParameters.scaleTransform.inverse)
 
+    // If global transform is set, then extract rigid part from non-rigid to be explained by global pose parameters
     val globalTransform: TranslationAfterScalingAfterRotation[_3D] = current.general.globalTransformation match {
       case SimilarityTransforms => estimateSimilarityTransform(currentFitNotAligned, newshape)
       case RigidTransforms => estimateRigidTransform(currentFitNotAligned, newshape)
@@ -90,7 +91,6 @@ trait GingrAlgorithm[State <: GingrRegistrationState[State]] {
     val transformedModel = current.general.model.transform(newGlobalAlignment)
     val alpha = transformedModel.coefficients(newshape)
 
-    current.config.converged
     val general = current.general
       .updateTranslation(newGlobalAlignment.translation.t)
       .updateRotation(newGlobalAlignment.rotation)

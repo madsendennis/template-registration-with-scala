@@ -10,13 +10,13 @@ import scalismo.utils.Random.implicits.randomGenerator
 import java.awt.Color
 import java.io.File
 
-object DemoPosteriorVisualizationFemur extends App{
+object DemoPosteriorVisualizationFemur extends App {
   scalismo.initialize()
 
   val burnInPhase = 1000
 
-  val (model, _) = DemoDatasetLoader.modelFemur()
-  val (target, _) = DemoDatasetLoader.targetFemur()
+  val (model, _) = DemoDatasetLoader.femur.modelGauss(decimate = Some(1000))
+  val (target, _) = DemoDatasetLoader.femur.target()
 
   val jsonFile = new File("data/femur/targetFittingICP.json")
   val fullLog = JSONStateLogger.loadLog(jsonFile)
