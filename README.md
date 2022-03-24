@@ -1,3 +1,6 @@
+# Not maintained:
+This repository has been moved to https://github.com/unibas-gravis/GiNGR 
+
 # Point set registration
 This library contains different template matching algorithms that works either on meshes or on pure pointclouds. 
 Some of the algorithms require one to specify a deformation model in form of a Gaussian Process Morphable Model.
